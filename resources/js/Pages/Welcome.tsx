@@ -195,11 +195,11 @@ export default function Welcome({ canLogin, pesantren }: Props) {
                             variants={fadeUpVariants}
                             className="flex flex-col sm:flex-row gap-4"
                         >
-                            <a href="#profil" className="inline-flex justify-center items-center gap-2 px-8 py-4 rounded-full bg-accent text-primary font-bold text-lg hover:bg-white transition-colors duration-300 shadow-xl shadow-accent/20">
+                            <a href="#profil" className="inline-flex justify-center items-center gap-2 px-8 py-4 rounded-xl bg-accent text-primary font-bold text-lg hover:bg-white transition-colors duration-300 shadow-xl shadow-accent/20">
                                 Kenali Kami Lebih Dekat
                                 <ArrowRight className="w-5 h-5" />
                             </a>
-                            <a href="#program" className="inline-flex justify-center items-center gap-2 px-8 py-4 rounded-full bg-white/10 backdrop-blur-md text-white border border-white/30 font-bold text-lg hover:bg-white/20 transition-colors duration-300">
+                            <a href="#program" className="inline-flex justify-center items-center gap-2 px-8 py-4 rounded-xl bg-white/10 backdrop-blur-md text-white border border-white/30 font-bold text-lg hover:bg-white/20 transition-colors duration-300">
                                 <PlayCircle className="w-5 h-5" />
                                 Video Profil
                             </a>
