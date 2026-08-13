@@ -22,6 +22,10 @@ return Application::configure(basePath: dirname(__DIR__))
             'api/ai/generate',
             '/api/ai/generate'
         ]);
+
+        $middleware->alias([
+            'role' => \App\Http\Middleware\CheckRole::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

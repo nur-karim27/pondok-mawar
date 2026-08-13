@@ -23,7 +23,7 @@ export default function Guest({ children }: PropsWithChildren) {
                 <div className="relative z-10">
                     <Link href="/" className="inline-flex items-center gap-3 bg-white/10 p-3 rounded-2xl backdrop-blur-md border border-white/20 hover:bg-white/20 transition-colors">
                         <ApplicationLogo className="h-10 w-10 text-white fill-current" />
-                        <span className="text-2xl font-bold text-white tracking-tight">PondokKita</span>
+                        <span className="text-2xl font-bold text-white tracking-tight">Ponpes Mawar</span>
                     </Link>
                 </div>
 
@@ -65,7 +65,7 @@ export default function Guest({ children }: PropsWithChildren) {
                 <div className="absolute top-8 left-8 lg:hidden">
                     <Link href="/" className="flex items-center gap-2 text-primary font-bold">
                         <ApplicationLogo className="h-8 w-8 text-primary fill-current" />
-                        PondokKita
+                        Ponpes Mawar
                     </Link>
                 </div>
 

@@ -2,7 +2,9 @@ import { Link, usePage } from '@inertiajs/react';
 import { PropsWithChildren, ReactNode, useState } from 'react';
 import { 
     LayoutDashboard, Users, BookOpen, UserCheck, Wallet, 
-    MessageSquare, Menu, X, FileText, Bell, CheckSquare, BrainCircuit
+    MessageSquare, Menu, X, FileText, Bell, CheckSquare, BrainCircuit,
+    ShieldAlert, FileSignature, CalendarDays, PiggyBank, Coins, Trophy, 
+    ActivitySquare, QrCode, BookOpenCheck, GraduationCap, ShieldCheck
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import ApplicationLogo from '@/Components/ApplicationLogo';
@@ -16,16 +18,64 @@ export default function Authenticated({
     const { url } = usePage();
     const [sidebarOpen, setSidebarOpen] = useState(false);
 
+    const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
+
+    const toggleGroup = (name: string) => {
+        setOpenGroups(prev => ({ ...prev, [name]: !prev[name] }));
+    };
+
     const navigation = [
-        { name: 'Dashboard', href: route('dashboard'), icon: LayoutDashboard, current: route().current('dashboard') },
-        { name: 'Kesantrian', href: route('kesantrian.index'), icon: Users, current: route().current('kesantrian.*') },
-        { name: 'Asatidz', href: route('staff.index'), icon: BookOpen, current: route().current('staff.*') },
-        { name: 'Absensi', href: route('attendances.index'), icon: CheckSquare, current: route().current('attendances.*') },
-        { name: 'Keuangan', href: route('payments.index'), icon: Wallet, current: route().current('payments.*') },
-        { name: 'Surat & Berkas', href: route('letters.index'), icon: FileText, current: route().current('letters.*') },
-        { name: 'Pengumuman', href: route('announcements.index'), icon: MessageSquare, current: route().current('announcements.*') },
-        { name: 'AI Assistant', href: route('ai.index'), icon: BrainCircuit, current: route().current('ai.*') },
-    ];
+        { name: 'Dashboard', href: route('dashboard'), icon: LayoutDashboard, current: route().current('dashboard'), roles: ['Super Admin', 'Keamanan', 'Bendahara', 'Wali Santri', 'Kesantrian'] },
+        
+        { 
+            name: 'Keamanan', icon: ShieldCheck, current: route().current('pelanggaran.*') || route().current('perizinan.*') || route().current('attendances.*'), roles: ['Super Admin', 'Keamanan'],
+            children: [
+                { name: 'Pelanggaran & Poin', href: route('pelanggaran.index'), current: route().current('pelanggaran.*'), roles: ['Super Admin', 'Keamanan'] },
+                { name: 'Perizinan', href: route('perizinan.index'), current: route().current('perizinan.*'), roles: ['Super Admin', 'Keamanan'] },
+                { name: 'Absensi', href: route('attendances.index'), current: route().current('attendances.*'), roles: ['Super Admin', 'Keamanan'] },
+            ]
+        },
+        
+        {
+            name: 'Bendahara', icon: Wallet, current: route().current('payments.*'), roles: ['Super Admin', 'Bendahara'],
+            children: [
+                { name: 'Uang Masuk / Rekap', href: route('payments.index'), current: route().current('payments.*'), roles: ['Super Admin', 'Bendahara'] },
+                { name: 'Tabungan Santri', href: '#', current: false, roles: ['Super Admin', 'Bendahara'] },
+                { name: 'Uang Saku', href: '#', current: false, roles: ['Super Admin', 'Bendahara'] },
+            ]
+        },
+        
+        {
+            name: 'Wali Santri', icon: Users, current: false, roles: ['Super Admin', 'Wali Santri'],
+            children: [
+                { name: 'Monitoring Prestasi', href: '#', current: false, roles: ['Super Admin', 'Wali Santri'] },
+                { name: 'Monitoring Kesehatan', href: '#', current: false, roles: ['Super Admin', 'Wali Santri'] },
+            ]
+        },
+        
+        {
+            name: 'Kesantrian', icon: BookOpenCheck, current: route().current('kesantrian.*'), roles: ['Super Admin', 'Kesantrian'],
+            children: [
+                { name: 'Biodata Santri', href: route('kesantrian.index'), current: route().current('kesantrian.*'), roles: ['Super Admin', 'Kesantrian'] },
+                { name: 'Absensi Jamaah (Barcode)', href: '#', current: false, roles: ['Super Admin', 'Kesantrian'] },
+                { name: 'Evaluasi Mukhafadoh', href: '#', current: false, roles: ['Super Admin', 'Kesantrian'] },
+                { name: 'Prestasi Santri', href: '#', current: false, roles: ['Super Admin', 'Kesantrian'] },
+                { name: 'Kesehatan Santri', href: '#', current: false, roles: ['Super Admin', 'Kesantrian'] },
+            ]
+        },
+        
+        { name: 'Kegiatan Alumni/IKSAMA', href: '#', icon: GraduationCap, current: false, roles: ['Super Admin'] },
+        
+        {
+            name: 'Modul Lainnya', icon: BookOpen, current: false, roles: ['Super Admin', 'Kesantrian'],
+            children: [
+                { name: 'Asatidz', href: route('staff.index'), current: route().current('staff.*'), roles: ['Super Admin'] },
+                { name: 'Surat & Berkas', href: route('letters.index'), current: route().current('letters.*'), roles: ['Super Admin'] },
+                { name: 'Pengumuman', href: route('announcements.index'), current: route().current('announcements.*'), roles: ['Super Admin', 'Kesantrian'] },
+                { name: 'AI Assistant', href: route('ai.index'), current: route().current('ai.*'), roles: ['Super Admin'] },
+            ]
+        }
+    ].filter(item => item.roles.includes(user.role));
 
     return (
         <div className="h-screen bg-background flex flex-col md:flex-row font-sans overflow-hidden">
@@ -50,7 +100,7 @@ export default function Authenticated({
                             <ApplicationLogo className="h-8 w-8 text-accent fill-current" />
                         </div>
                         <div>
-                            <span className="text-2xl font-bold tracking-tight text-white">PondokKita</span>
+                            <span className="text-2xl font-bold tracking-tight text-white">Ponpes Mawar</span>
                             <span className="block text-[10px] uppercase tracking-widest text-accent font-medium">Sistem Administrasi</span>
                         </div>
                     </Link>
@@ -61,19 +111,61 @@ export default function Authenticated({
 
                 <nav className="p-4 space-y-1 overflow-y-auto h-[calc(100vh-5rem)] custom-scrollbar">
                     {navigation.map((item) => (
-                        <Link
-                            key={item.name}
-                            href={item.href}
-                            className={`
-                                flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group
-                                ${item.current 
-                                    ? 'bg-accent text-primary font-semibold shadow-md shadow-accent/20' 
-                                    : 'text-gray-300 hover:bg-primary-light hover:text-white'}
-                            `}
-                        >
-                            <item.icon className={`h-5 w-5 ${item.current ? 'text-primary' : 'text-accent group-hover:scale-110 transition-transform'}`} />
-                            {item.name}
-                        </Link>
+                        <div key={item.name}>
+                            {item.children ? (
+                                <div>
+                                    <button
+                                        onClick={() => toggleGroup(item.name)}
+                                        className={`
+                                            w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-200 group
+                                            ${item.current || openGroups[item.name]
+                                                ? 'bg-primary-light text-white font-medium' 
+                                                : 'text-gray-300 hover:bg-primary-light hover:text-white'}
+                                        `}
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <item.icon className={`h-5 w-5 ${item.current ? 'text-accent' : 'text-gray-400 group-hover:text-accent'}`} />
+                                            {item.name}
+                                        </div>
+                                        <svg className={`h-4 w-4 transform transition-transform duration-200 ${openGroups[item.name] ? 'rotate-180 text-accent' : 'text-gray-500'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </button>
+                                    
+                                    {openGroups[item.name] && (
+                                        <div className="mt-1 ml-4 pl-4 border-l border-primary-light/50 space-y-1">
+                                            {item.children.filter((c: any) => c.roles.includes(user.role)).map((child: any) => (
+                                                <Link
+                                                    key={child.name}
+                                                    href={child.href}
+                                                    className={`
+                                                        block px-4 py-2 rounded-lg text-sm transition-all duration-200
+                                                        ${child.current 
+                                                            ? 'bg-accent/20 text-accent font-semibold' 
+                                                            : 'text-gray-400 hover:bg-primary-light hover:text-white'}
+                                                    `}
+                                                >
+                                                    {child.name}
+                                                </Link>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            ) : (
+                                <Link
+                                    href={item.href}
+                                    className={`
+                                        flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group
+                                        ${item.current 
+                                            ? 'bg-accent text-primary font-semibold shadow-md shadow-accent/20' 
+                                            : 'text-gray-300 hover:bg-primary-light hover:text-white'}
+                                    `}
+                                >
+                                    <item.icon className={`h-5 w-5 ${item.current ? 'text-primary' : 'text-accent group-hover:scale-110 transition-transform'}`} />
+                                    {item.name}
+                                </Link>
+                            )}
+                        </div>
                     ))}
                 </nav>
             </aside>

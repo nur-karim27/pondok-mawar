@@ -19,11 +19,20 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     // Modules
+    Route::resource('pelanggaran', \App\Http\Controllers\StudentViolationController::class);
+    Route::post('/pelanggaran/{pelanggaran}/resolve', [\App\Http\Controllers\StudentViolationController::class, 'resolve'])->name('pelanggaran.resolve');
+    
+    // Perizinan
+    Route::resource('perizinan', \App\Http\Controllers\StudentPermissionController::class);
+    Route::put('/perizinan/{perizinan}/status', [\App\Http\Controllers\StudentPermissionController::class, 'updateStatus'])->name('perizinan.status');
+    Route::get('/perizinan/{perizinan}/cetak', [\App\Http\Controllers\StudentPermissionController::class, 'print'])->name('perizinan.print');
+    
     Route::resource('kesantrian', \App\Http\Controllers\StudentController::class)->parameters([
         'kesantrian' => 'student'
     ]);
     Route::get('/asatidz', [\App\Http\Controllers\StaffController::class, 'index'])->name('staff.index');
-    Route::get('/absensi', [\App\Http\Controllers\AttendanceController::class, 'index'])->name('attendances.index');
+    // Absensi
+    Route::resource('absensi', \App\Http\Controllers\AttendanceController::class)->names('attendances')->parameters(['absensi' => 'attendance']);
     Route::get('/keuangan', [\App\Http\Controllers\PaymentController::class, 'index'])->name('payments.index');
     Route::get('/surat', [\App\Http\Controllers\LetterController::class, 'index'])->name('letters.index');
     Route::get('/pengumuman', [\App\Http\Controllers\AnnouncementController::class, 'index'])->name('announcements.index');

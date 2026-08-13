@@ -35,7 +35,7 @@ export default function Login({
 
             <div className="mb-8 text-center sm:text-left">
                 <h2 className="text-3xl font-extrabold text-gray-900 mb-2">Selamat Datang</h2>
-                <p className="text-gray-500">Silakan login ke portal pengurus PondokKita.</p>
+                <p className="text-gray-500">Silakan login ke portal pengurus Ponpes Mawar.</p>
             </div>
 
             {status && (
@@ -60,7 +60,7 @@ export default function Login({
                             autoComplete="username"
                             isFocused={true}
                             onChange={(e) => setData('email', e.target.value)}
-                            placeholder="admin@pondokkita.com"
+                            placeholder="admin@ponpesmawar.com"
                         />
                     </div>
                     <InputError message={errors.email} className="mt-2" />

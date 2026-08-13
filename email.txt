@@ -1,2 +1,27 @@
-email:superadmin@pondokkita.test
-ps:password
+Super Admin: superadmin@ponpesmawar.test
+Admin Keamanan: keamanan@ponpesmawar.test
+Admin Kesantrian: kesantrian@ponpesmawar.test
+Bendahara Pondok: bendahara@ponpesmawar.test (Nantinya kita juga akan menambahkan login khusus untuk Wali Santri).
+
+untuk password defauld : password
+
+
+USER
+1. SuperAdmin:
+mencakup semuanya
+
+2. Keamanan:
+pelamggaran, absensi sekolah dan madin, perizinan keluar pondok, izin pulang, izin sekolah, izin madin, poin pelanggaran
+
+3. Bendahara:
+uang masuk, rekap uang, monitoring keuangan, 2 metode transaksi otomatis dan manual, tabungan santri, uang saku, kirim notif keuangan/tagihan manual dan otomatis lewat wa
+
+4. Login Wali Santri
+prestasi, biodata, login menggunakan nama santri dan password default, wali bisa memonitroing santri, pelanggaran, kesehatan
+
+5. Kesantrian:
+absensi jamaah menggunakan barcode, evaluasi mukhafadoh, prestasi, kesehatan
+
+
+
+note: kegiatan alumni/ iksama

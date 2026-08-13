@@ -14,41 +14,41 @@ class RolesAndUsersSeeder extends Seeder
     {
         \App\Models\User::create([
             'name' => 'Super Admin',
-            'email' => 'superadmin@pondokkita.test',
+            'email' => 'superadmin@ponpesmawar.test',
             'password' => \Illuminate\Support\Facades\Hash::make('password'),
             'role' => 'Super Admin',
             'is_active' => true,
         ]);
 
         \App\Models\User::create([
-            'name' => 'KH. Ahmad Fawwaz',
-            'email' => 'pimpinan@pondokkita.test',
+            'name' => 'Admin Keamanan',
+            'email' => 'keamanan@ponpesmawar.test',
             'password' => \Illuminate\Support\Facades\Hash::make('password'),
-            'role' => 'Pimpinan Pondok',
+            'role' => 'Keamanan',
             'is_active' => true,
         ]);
 
         \App\Models\User::create([
-            'name' => 'Ustadzah Nur Aini',
-            'email' => 'sekretaris@pondokkita.test',
+            'name' => 'Admin Kesantrian',
+            'email' => 'kesantrian@ponpesmawar.test',
             'password' => \Illuminate\Support\Facades\Hash::make('password'),
-            'role' => 'Sekretaris',
+            'role' => 'Kesantrian',
             'is_active' => true,
         ]);
 
         \App\Models\User::create([
             'name' => 'Bendahara Pondok',
-            'email' => 'bendahara@pondokkita.test',
+            'email' => 'bendahara@ponpesmawar.test',
             'password' => \Illuminate\Support\Facades\Hash::make('password'),
             'role' => 'Bendahara',
             'is_active' => true,
         ]);
 
         \App\Models\User::create([
-            'name' => 'Ustadz Musyrif',
-            'email' => 'musyrif@pondokkita.test',
+            'name' => 'Wali Santri Fulan',
+            'email' => 'wali@ponpesmawar.test',
             'password' => \Illuminate\Support\Facades\Hash::make('password'),
-            'role' => 'Musyrif / Pengasuhan',
+            'role' => 'Wali Santri',
             'is_active' => true,
         ]);
     }

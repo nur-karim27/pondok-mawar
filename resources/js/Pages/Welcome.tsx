@@ -68,13 +68,13 @@ export default function Welcome({ canLogin, pesantren }: Props) {
 
     const news = [
         { title: 'Pendaftaran Santri Baru Tahun Ajaran 2026/2027 Resmi Dibuka', date: '01 Agustus 2026', image: 'https://images.unsplash.com/photo-1596489377461-2a149b109e25?auto=format&fit=crop&q=80&w=800' },
-        { title: 'Kunjungan Silaturahmi Ulama Timur Tengah ke PondokKita', date: '28 Juli 2026', image: 'https://images.unsplash.com/photo-1577884877395-5df79b4a44f3?auto=format&fit=crop&q=80&w=800' },
+        { title: 'Kunjungan Silaturahmi Ulama Timur Tengah ke Ponpes Mawar', date: '28 Juli 2026', image: 'https://images.unsplash.com/photo-1577884877395-5df79b4a44f3?auto=format&fit=crop&q=80&w=800' },
         { title: 'Prestasi Santri: Juara Umum MTQ Nasional Tingkat Provinsi', date: '15 Juli 2026', image: 'https://images.unsplash.com/photo-1629815049364-77fec3aeb30a?auto=format&fit=crop&q=80&w=800' },
     ];
 
     return (
         <div className="min-h-screen bg-gray-50 font-sans text-gray-800 selection:bg-primary/20 selection:text-primary overflow-x-hidden">
-            <Head title={`Selamat Datang di ${pesantren?.name || 'PondokKita'}`} />
+            <Head title={`Selamat Datang di ${pesantren?.name || 'Ponpes Mawar'}`} />
 
             {/* Navbar */}
             <motion.nav 
@@ -89,7 +89,7 @@ export default function Welcome({ canLogin, pesantren }: Props) {
                             <ApplicationLogo className="h-8 w-8 text-white fill-current" />
                         </div>
                         <span className="text-xl font-bold tracking-tight text-white">
-                            {pesantren?.short_name || 'PondokKita'}
+                            {pesantren?.short_name || 'Ponpes Mawar'}
                         </span>
                     </div>
                     
@@ -404,7 +404,7 @@ export default function Welcome({ canLogin, pesantren }: Props) {
                                     <ApplicationLogo className="h-8 w-8 text-white fill-current" />
                                 </div>
                                 <div>
-                                    <span className="text-xl font-bold text-white tracking-tight">{pesantren?.short_name || 'PondokKita'}</span>
+                                    <span className="text-xl font-bold text-white tracking-tight">{pesantren?.short_name || 'Ponpes Mawar'}</span>
                                     <span className="block text-[10px] uppercase tracking-widest text-gray-400">Pesantren Modern</span>
                                 </div>
                             </div>
@@ -460,7 +460,7 @@ export default function Welcome({ canLogin, pesantren }: Props) {
                     
                     <div className="border-t border-gray-800 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
                         <p className="text-gray-500 text-sm">
-                            &copy; {new Date().getFullYear()} {pesantren?.name || 'PondokKita'}. All rights reserved.
+                            &copy; {new Date().getFullYear()} {pesantren?.name || 'Ponpes Mawar'}. All rights reserved.
                         </p>
                         <div className="flex gap-4">
                             <a href="#" className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center text-gray-400 hover:bg-primary hover:text-white transition-colors">

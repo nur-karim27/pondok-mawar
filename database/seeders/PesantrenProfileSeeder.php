@@ -13,8 +13,8 @@ class PesantrenProfileSeeder extends Seeder
     public function run(): void
     {
         \App\Models\PesantrenProfile::create([
-            'name' => 'Pondok Pesantren Al-Hikmah',
-            'short_name' => 'Al-Hikmah',
+            'name' => "Pondok Pesantren Mamba'ul Anwar",
+            'short_name' => "Mamba'ul Anwar",
             'npsn' => '10293847',
             'address' => 'Jl. Pendidikan No. 123, Desa Damai',
             'village' => 'Damai',
@@ -29,7 +29,7 @@ class PesantrenProfileSeeder extends Seeder
             'leader_name' => 'KH. Ahmad Fawwaz',
             'vision' => 'Mencetak generasi rabbani yang berilmu, beramal, dan berakhlak mulia.',
             'mission' => '1. Menyelenggarakan pendidikan Islam terpadu.\n2. Membina akhlak karimah.\n3. Mengembangkan kemandirian umat.',
-            'description' => 'Pondok Pesantren Al-Hikmah adalah lembaga pendidikan Islam yang berdedikasi tinggi terhadap pengembangan karakter santri.'
+            'description' => "Pondok Pesantren Mamba'ul Anwar adalah lembaga pendidikan Islam yang berdedikasi tinggi terhadap pengembangan karakter santri."
         ]);
     }
 }

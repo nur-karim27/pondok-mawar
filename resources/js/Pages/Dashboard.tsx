@@ -51,7 +51,7 @@ export default function Dashboard({ stats, upcoming_activities, recent_letters, 
                             Ahlan wa Sahlan, <span className="text-primary">Admin</span>!
                         </h1>
                         <p className="text-gray-500 max-w-2xl text-lg">
-                            Selamat datang di sistem administrasi terpadu PondokKita. Berikut adalah ringkasan aktivitas pondok pesantren hari ini.
+                            Selamat datang di sistem administrasi terpadu Ponpes Mawar. Berikut adalah ringkasan aktivitas pondok pesantren hari ini.
                         </p>
                     </div>
 
