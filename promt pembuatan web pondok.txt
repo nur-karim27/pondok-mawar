@@ -1,0 +1,107 @@
+Act as a Principal Full-Stack Developer (Laravel + React + Inertia + Tailwind). Your objective is to build a complete Islamic Boarding School Management System (Sistem Informasi Manajemen Pesantren) called "Pondok Mawar" from scratch to finish. 
+
+Please follow this exact blueprint carefully. Wait for my confirmation ("Lanjut ke Step X") before executing the next step.
+
+---
+
+### TECH STACK REQUIREMENTS
+- **Backend:** Laravel 12 (PHP 8.2+)
+- **Frontend:** React 18, TypeScript, Inertia.js v2, Vite
+- **Styling & UI:** Tailwind CSS v3, HeadlessUI, Tailwind Forms
+- **Icons & Animation:** Lucide React, Framer Motion
+- **Auth:** Laravel Breeze (React/Inertia stack), Sanctum
+
+---
+
+### STEP 1: INITIALIZATION & AUTH SETUP
+1. Create a new Laravel project: `composer create-project laravel/laravel pondok-mawar`
+2. Configure `.env` for the database (MySQL/SQLite).
+3. Install Laravel Breeze using the React/Inertia stack with TypeScript.
+4. Install additional NPM packages: `lucide-react`, `framer-motion`, `@headlessui/react`.
+5. Modify `User` model to include a `role` column. 
+
+**Wait for my confirmation before proceeding to Step 2.**
+
+---
+
+### STEP 2: DATABASE MIGRATIONS & MODELS
+Generate migrations, models (with relationships), factories, and seeders for these tables.
+
+1. **users:** id, name, email, password, role (enum: admin, keamanan, pengasuh, guru), timestamps.
+2. **pesantren_profiles:** id, name, address, phone, email, logo, description, timestamps.
+3. **dormitories (Asrama):** id, name, capacity, gender (enum: putra, putri), head_of_dormitory (string), timestamps.
+4. **rooms (Kamar):** id, dormitory_id, name, capacity, timestamps.
+5. **guardians (Wali Santri):** id, user_id (optional), name, phone, address, relation, timestamps.
+6. **students (Santri):** id, nis, name, gender, birth_place, birth_date, guardian_id, room_id, status (aktif, alumni, dll), timestamps.
+7. **staff_members (Pengurus/Ustadz):** id, user_id, nip, name, phone, position, timestamps.
+8. **activities (Kegiatan):** id, name, description, type, start_time, end_time, location, timestamps.
+9. **activity_participants:** id, activity_id, student_id, timestamps.
+10. **attendances (Absensi):** id, student_id, activity_id (nullable), date, time, status (hadir, sakit, izin, alpa), notes, timestamps.
+11. **student_permissions (Perizinan):** 
+    - id, student_id
+    - permission_type (enum: pulang, keluar, sakit, keluarga, lainnya)
+    - reason (text)
+    - leave_date (datetime), return_date (datetime nullable)
+    - destination, guardian_phone
+    - status (enum: diajukan, disetujui, ditolak, selesai)
+    - approved_by (foreign id to users), approval_notes
+    - timestamps.
+12. **student_violations (Pelanggaran):** id, student_id, violation_type, description, point, punishment, date, reported_by (user_id), timestamps.
+13. **ai_generations (AI Logs):** id, user_id, feature, prompt, result (text), timestamps.
+
+**Wait for my confirmation before proceeding to Step 3.**
+
+---
+
+### STEP 3: CONTROLLERS & API ROUTES
+Create Web and API routes, Form Requests, and Controllers for the following modules:
+1. **Admin Dashboard Controller:** Returns stats for the React dashboard (total students, pending permissions, violations).
+2. **Master Data Controllers:** CRUD for Students, Dormitories, Rooms, and Staff.
+3. **Keamanan Module (Security Controllers):**
+   - `AttendanceController`
+   - `StudentPermissionController` (Include a method to generate/print a permission slip as PDF/Blade).
+   - `StudentViolationController`
+4. **AiController:** 
+   - Feature: Generate letters, announcements, or summaries using AI (Simulate the logic using an AiGenerationService or just a mockup endpoint for now).
+5. **Middleware:** Create a `CheckRole` middleware to restrict routes based on user role (e.g., only 'keamanan' can access Keamanan Module).
+
+**Wait for my confirmation before proceeding to Step 4.**
+
+---
+
+### STEP 4: BASE UI COMPONENTS (REACT)
+Using Tailwind CSS and Framer Motion, build these reusable UI components in `resources/js/Components/`:
+- `Sidebar.tsx` & `Navbar.tsx` (Premium design, collapsible, active state highlights).
+- `Card.tsx` (Glassmorphism or clean shadows).
+- `Table.tsx` (Reusable data table with pagination, search bar, and status badges).
+- `Modal.tsx` (Using HeadlessUI Dialog).
+- `Badge.tsx` (For status like 'disetujui', 'ditolak', etc.)
+
+**Wait for my confirmation before proceeding to Step 5.**
+
+---
+
+### STEP 5: FRONTEND PAGES (REACT/INERTIA)
+Build the Inertia pages in `resources/js/Pages/`:
+1. **Dashboard.tsx:** Beautiful layout with statistic cards (using Lucide icons), recent violations list, and quick action buttons.
+2. **Students/Index.tsx:** Data table of students.
+3. **Keamanan/Attendances/Index.tsx:** Form to input daily attendance and table of records.
+4. **Keamanan/Permissions/Index.tsx:** Manage permissions. Must have buttons to "Approve", "Reject", and "Print Slip".
+5. **Keamanan/Violations/Index.tsx:** Form to record violations with points and punishment details.
+6. **AiAssistant/Index.tsx:** A chat-like UI or form to request AI generation for school letters/announcements.
+
+**Wait for my confirmation before proceeding to Step 6.**
+
+---
+
+### STEP 6: BLADE PRINT TEMPLATES & SEEDERS
+1. Create a `resources/views/print/permission.blade.php` to act as the printable Surat Izin Santri. Make it look formal with a letterhead (Kop Surat Pondok Mawar).
+2. Populate the Database with Seeders:
+   - `RolesAndUsersSeeder` (Create Admin and Keamanan users)
+   - `PesantrenProfileSeeder`
+   - `DormitoryAndRoomSeeder`
+   - `GuardianAndStudentSeeder`
+   - `AttendanceAndPermissionSeeder`
+3. Run migrations and seeders (`php artisan migrate:fresh --seed`).
+
+When done, give me instructions to run `npm run dev` and `php artisan serve` to test the complete application. Let's begin with Step 1!

@@ -3,6 +3,7 @@
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\AiController;
+use App\Http\Controllers\CanteenController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -33,7 +34,31 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/asatidz', [\App\Http\Controllers\StaffController::class, 'index'])->name('staff.index');
     // Absensi
     Route::resource('absensi', \App\Http\Controllers\AttendanceController::class)->names('attendances')->parameters(['absensi' => 'attendance']);
-    Route::get('/keuangan', [\App\Http\Controllers\PaymentController::class, 'index'])->name('payments.index');
+    
+    // Keuangan (Bendahara)
+    Route::resource('keuangan', \App\Http\Controllers\PaymentController::class)->names('payments')->parameters(['keuangan' => 'payment']);
+    Route::get('/api/students/{student}/bills', [\App\Http\Controllers\PaymentController::class, 'getStudentBills'])->name('api.students.bills');
+    
+    // Tabungan Santri
+    Route::get('tabungan/history', [\App\Http\Controllers\StudentSavingController::class, 'history'])->name('tabungan.history');
+    Route::get('tabungan/export', [\App\Http\Controllers\StudentSavingController::class, 'export'])->name('tabungan.export');
+    Route::get('tabungan/export-balances', [\App\Http\Controllers\StudentSavingController::class, 'exportBalances'])->name('tabungan.export_balances');
+    Route::get('tabungan/{student}/export-student', [\App\Http\Controllers\StudentSavingController::class, 'exportStudent'])->name('tabungan.export_student');
+    Route::resource('tabungan', \App\Http\Controllers\StudentSavingController::class)->names('tabungan')->parameters(['tabungan' => 'tabungan']);
+
+    // Keuangan Kantin (Bendahara Kantin)
+    Route::get('/kantin', [CanteenController::class, 'index'])->name('kantin.index');
+    Route::get('/kantin/history', [CanteenController::class, 'history'])->name('kantin.history');
+    Route::get('/kantin/export', [CanteenController::class, 'export'])->name('kantin.export');
+    Route::get('/kantin/export-balances', [CanteenController::class, 'exportBalances'])->name('kantin.export_balances');
+    Route::get('/kantin/settings', [CanteenController::class, 'settings'])->name('kantin.settings');
+    Route::post('/kantin/settings', [CanteenController::class, 'storeSettings'])->name('kantin.settings.store');
+    Route::delete('/kantin/settings/{kantin}', [CanteenController::class, 'destroySettings'])->name('kantin.settings.destroy');
+    Route::post('/kantin', [CanteenController::class, 'store'])->name('kantin.store');
+    Route::put('/kantin/transactions/{transaction}', [CanteenController::class, 'update'])->name('kantin.transactions.update');
+    Route::get('/kantin/{kantin}/export', [CanteenController::class, 'exportCanteen'])->name('kantin.export_canteen');
+    Route::get('/kantin/{kantin}', [CanteenController::class, 'show'])->name('kantin.show');
+
     Route::get('/surat', [\App\Http\Controllers\LetterController::class, 'index'])->name('letters.index');
     Route::get('/pengumuman', [\App\Http\Controllers\AnnouncementController::class, 'index'])->name('announcements.index');
 

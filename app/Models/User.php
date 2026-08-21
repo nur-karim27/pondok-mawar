@@ -42,4 +42,9 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+
+    public function receivedPayments()
+    {
+        return $this->hasMany(Payment::class, 'received_by');
+    }
 }

@@ -37,11 +37,11 @@ export default function Authenticated({
         },
         
         {
-            name: 'Bendahara', icon: Wallet, current: route().current('payments.*'), roles: ['Super Admin', 'Bendahara'],
+            name: 'Bendahara', icon: Wallet, current: route().current('payments.*') || route().current('tabungan.*'), roles: ['Super Admin', 'Bendahara'],
             children: [
                 { name: 'Uang Masuk / Rekap', href: route('payments.index'), current: route().current('payments.*'), roles: ['Super Admin', 'Bendahara'] },
-                { name: 'Tabungan Santri', href: '#', current: false, roles: ['Super Admin', 'Bendahara'] },
-                { name: 'Uang Saku', href: '#', current: false, roles: ['Super Admin', 'Bendahara'] },
+                { name: 'Tabungan Santri', href: route('tabungan.index'), current: route().current('tabungan.*'), roles: ['Super Admin', 'Bendahara'] },
+                { name: 'Keuangan Kantin', href: route('kantin.index'), current: route().current('kantin.*'), roles: ['Super Admin', 'Bendahara'] },
             ]
         },
         
