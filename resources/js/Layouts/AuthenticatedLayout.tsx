@@ -46,21 +46,20 @@ export default function Authenticated({
         },
         
         {
-            name: 'Wali Santri', icon: Users, current: false, roles: ['Super Admin', 'Wali Santri'],
+            name: 'Wali Santri', icon: Users, current: route().current('monitoring-santri.*'), roles: ['Super Admin', 'Wali Santri'],
             children: [
-                { name: 'Monitoring Prestasi', href: '#', current: false, roles: ['Super Admin', 'Wali Santri'] },
-                { name: 'Monitoring Kesehatan', href: '#', current: false, roles: ['Super Admin', 'Wali Santri'] },
+                { name: 'Monitoring Santri', href: route('monitoring-santri.index'), current: route().current('monitoring-santri.*'), roles: ['Super Admin', 'Wali Santri'] },
             ]
         },
         
         {
-            name: 'Kesantrian', icon: BookOpenCheck, current: route().current('kesantrian.*'), roles: ['Super Admin', 'Kesantrian'],
+            name: 'Kesantrian', icon: BookOpenCheck, current: route().current('kesantrian.*') || route().current('prestasi.*') || route().current('kesehatan.*'), roles: ['Super Admin', 'Kesantrian'],
             children: [
                 { name: 'Biodata Santri', href: route('kesantrian.index'), current: route().current('kesantrian.*'), roles: ['Super Admin', 'Kesantrian'] },
                 { name: 'Absensi Jamaah (Barcode)', href: '#', current: false, roles: ['Super Admin', 'Kesantrian'] },
                 { name: 'Evaluasi Mukhafadoh', href: '#', current: false, roles: ['Super Admin', 'Kesantrian'] },
-                { name: 'Prestasi Santri', href: '#', current: false, roles: ['Super Admin', 'Kesantrian'] },
-                { name: 'Kesehatan Santri', href: '#', current: false, roles: ['Super Admin', 'Kesantrian'] },
+                { name: 'Prestasi Santri', href: route('prestasi.index'), current: route().current('prestasi.*'), roles: ['Super Admin', 'Kesantrian'] },
+                { name: 'Kesehatan Santri', href: route('kesehatan.index'), current: route().current('kesehatan.*'), roles: ['Super Admin', 'Kesantrian'] },
             ]
         },
         

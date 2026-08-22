@@ -62,6 +62,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/surat', [\App\Http\Controllers\LetterController::class, 'index'])->name('letters.index');
     Route::get('/pengumuman', [\App\Http\Controllers\AnnouncementController::class, 'index'])->name('announcements.index');
 
+    // Monitoring Santri (Wali Santri)
+    Route::get('/monitoring-santri', [\App\Http\Controllers\MonitoringSantriController::class, 'index'])->name('monitoring-santri.index');
+    Route::get('/monitoring-santri/{student}', [\App\Http\Controllers\MonitoringSantriController::class, 'show'])->name('monitoring-santri.show');
+
+    // Kesehatan & Prestasi (Kesantrian/Admin)
+    Route::resource('prestasi', \App\Http\Controllers\StudentAchievementController::class)->except(['create', 'show', 'edit']);
+    Route::resource('kesehatan', \App\Http\Controllers\StudentHealthRecordController::class)->except(['create', 'show', 'edit']);
+
     // AI Assistant
     Route::get('/ai-assistant', [AiController::class, 'index'])->name('ai.index');
     Route::post('/api/ai/generate', [AiController::class, 'generate'])

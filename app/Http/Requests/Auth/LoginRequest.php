@@ -28,7 +28,7 @@ class LoginRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'email' => ['required', 'string', 'email'],
+            'name' => ['required', 'string'],
             'password' => ['required', 'string'],
         ];
     }
@@ -42,12 +42,32 @@ class LoginRequest extends FormRequest
     {
         $this->ensureIsNotRateLimited();
 
-        if (! Auth::attempt($this->only('email', 'password'), $this->boolean('remember'))) {
+        $loginField = filter_var($this->input('name'), FILTER_VALIDATE_EMAIL) ? 'email' : 'name';
+        $credentials = [
+            $loginField => $this->input('name'),
+            'password' => $this->input('password')
+        ];
+
+        if (! Auth::attempt($credentials, $this->boolean('remember'))) {
             RateLimiter::hit($this->throttleKey());
 
             throw ValidationException::withMessages([
-                'email' => trans('auth.failed'),
+                'name' => trans('auth.failed'),
             ]);
+        }
+
+        $user = Auth::user();
+        if ($user->role === 'Wali Santri') {
+            // Find student by user_id (since user_id in students table links to the Wali Santri login account)
+            $student = \App\Models\Student::where('user_id', $user->id)->first();
+            
+            // Block login if student has graduated or moved
+            if ($student && in_array($student->status, ['lulus', 'pindah', 'nonaktif'])) {
+                Auth::logout();
+                throw ValidationException::withMessages([
+                    'name' => 'Akun dinonaktifkan karena santri sudah Lulus atau Boyong/Pindah.',
+                ]);
+            }
         }
 
         RateLimiter::clear($this->throttleKey());
@@ -69,7 +89,7 @@ class LoginRequest extends FormRequest
         $seconds = RateLimiter::availableIn($this->throttleKey());
 
         throw ValidationException::withMessages([
-            'email' => trans('auth.throttle', [
+            'name' => trans('auth.throttle', [
                 'seconds' => $seconds,
                 'minutes' => ceil($seconds / 60),
             ]),
@@ -81,6 +101,6 @@ class LoginRequest extends FormRequest
      */
     public function throttleKey(): string
     {
-        return Str::transliterate(Str::lower($this->string('email')).'|'.$this->ip());
+        return Str::transliterate(Str::lower($this->string('name')).'|'.$this->ip());
     }
 }

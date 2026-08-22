@@ -27,5 +27,20 @@ class Student extends Model
     {
         return $this->hasMany(SavingTransaction::class);
     }
+
+    public function achievements()
+    {
+        return $this->hasMany(StudentAchievement::class);
+    }
+
+    public function healthRecords()
+    {
+        return $this->hasMany(StudentHealthRecord::class);
+    }
+
+    public function violations()
+    {
+        return $this->hasMany(StudentViolation::class);
+    }
 }
 

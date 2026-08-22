@@ -4,8 +4,8 @@ import InputLabel from '@/Components/InputLabel';
 import TextInput from '@/Components/TextInput';
 import GuestLayout from '@/Layouts/GuestLayout';
 import { Head, Link, useForm } from '@inertiajs/react';
-import { FormEventHandler } from 'react';
-import { LogIn, Mail, Lock, ArrowRight } from 'lucide-react';
+import { FormEventHandler, useState, useEffect } from 'react';
+import { LogIn, Mail, Lock, ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export default function Login({
@@ -15,11 +15,31 @@ export default function Login({
     status?: string;
     canResetPassword: boolean;
 }) {
+    const [showPassword, setShowPassword] = useState(false);
     const { data, setData, post, processing, errors, reset } = useForm({
-        email: '',
+        name: '',
         password: '',
         remember: false as boolean,
     });
+
+    // Force prevent mobile keyboard from popping up automatically on page load
+    useEffect(() => {
+        const preventFocus = () => {
+            if (typeof document !== 'undefined' && document.activeElement?.tagName === 'INPUT') {
+                (document.activeElement as HTMLElement).blur();
+            }
+        };
+        
+        preventFocus();
+        // Fire again slightly later to override delayed browser autofill actions
+        const t1 = setTimeout(preventFocus, 100);
+        const t2 = setTimeout(preventFocus, 400);
+        
+        return () => {
+            clearTimeout(t1);
+            clearTimeout(t2);
+        };
+    }, []);
 
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
@@ -33,9 +53,11 @@ export default function Login({
         <GuestLayout>
             <Head title="Log in" />
 
-            <div className="mb-8 text-center sm:text-left">
+            <div className="mb-8 text-center">
                 <h2 className="text-3xl font-extrabold text-gray-900 mb-2">Selamat Datang</h2>
-                <p className="text-gray-500">Silakan login ke portal pengurus Ponpes Mawar.</p>
+                <p className="mt-2 text-sm text-gray-500">
+                    Silakan masuk ke portal Pondok Pesantren Mamba'ul Anwar.
+                </p>
             </div>
 
             {status && (
@@ -46,24 +68,23 @@ export default function Login({
 
             <form onSubmit={submit} className="space-y-5">
                 <div>
-                    <InputLabel htmlFor="email" value="Alamat Email" className="mb-1 text-gray-700" />
+                    <InputLabel htmlFor="name" value="Nama Lengkap / Email" className="mb-1 text-gray-700" />
                     <div className="relative">
                         <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                             <Mail className="h-5 w-5 text-gray-400" />
                         </div>
                         <TextInput
-                            id="email"
-                            type="email"
-                            name="email"
-                            value={data.email}
+                            id="name"
+                            type="text"
+                            name="name"
+                            value={data.name}
                             className="pl-11 block w-full rounded-xl border-gray-200 focus:border-primary focus:ring-primary/20 transition-all shadow-sm h-12"
                             autoComplete="username"
-                            isFocused={true}
-                            onChange={(e) => setData('email', e.target.value)}
-                            placeholder="admin@ponpesmawar.com"
+                            onChange={(e) => setData('name', e.target.value)}
+                            placeholder="Masukkan nama santri atau email admin..."
                         />
                     </div>
-                    <InputError message={errors.email} className="mt-2" />
+                    <InputError message={errors.name} className="mt-2" />
                 </div>
 
                 <div>
@@ -84,14 +105,22 @@ export default function Login({
                         </div>
                         <TextInput
                             id="password"
-                            type="password"
+                            type={showPassword ? "text" : "password"}
                             name="password"
                             value={data.password}
-                            className="pl-11 block w-full rounded-xl border-gray-200 focus:border-primary focus:ring-primary/20 transition-all shadow-sm h-12"
+                            className="pl-11 pr-11 block w-full rounded-xl border-gray-200 focus:border-primary focus:ring-primary/20 transition-all shadow-sm h-12"
                             autoComplete="current-password"
                             onChange={(e) => setData('password', e.target.value)}
                             placeholder="••••••••"
                         />
+                        <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600 focus:outline-none"
+                            title={showPassword ? "Sembunyikan sandi" : "Tampilkan sandi"}
+                        >
+                            {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                        </button>
                     </div>
                     <InputError message={errors.password} className="mt-2" />
                 </div>
@@ -125,12 +154,9 @@ export default function Login({
             </form>
             
             <div className="mt-8 pt-6 border-t border-gray-100 text-center">
-                <p className="text-sm text-gray-500">
-                    Sistem informasi ini khusus untuk staf dan pengurus. <br className="hidden sm:block" />
-                    <Link href="/" className="text-primary font-semibold hover:underline mt-1 inline-block">
-                        Kembali ke Halaman Utama
-                    </Link>
-                </p>
+                <Link href="/" className="text-primary font-semibold hover:underline inline-block">
+                    Kembali ke Halaman Utama
+                </Link>
             </div>
         </GuestLayout>
     );

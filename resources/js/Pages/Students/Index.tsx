@@ -2,7 +2,7 @@ import { useState } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, router } from '@inertiajs/react';
 import { PageProps, Student, Room, Guardian } from '@/types';
-import { Plus, Search, Edit2, Trash2, Users } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Users, Filter } from 'lucide-react';
 import Pagination from '@/Components/Pagination';
 import StudentFormModal from './Partials/StudentFormModal';
 import DangerButton from '@/Components/DangerButton';
@@ -15,20 +15,22 @@ interface StudentsProps extends PageProps {
         links: any[];
         total: number;
     };
-    filters: { search?: string };
-    rooms: Room[];
+    filters: { search?: string, status?: string };
+    dormitories: any[];
+    rooms: any[];
     guardians: Guardian[];
 }
 
-export default function Index({ auth, students, filters, rooms, guardians }: StudentsProps) {
+export default function Index({ auth, students, filters, dormitories, rooms, guardians }: StudentsProps) {
     const [search, setSearch] = useState(filters.search || '');
+    const [statusFilter, setStatusFilter] = useState(filters.status || '');
     const [isFormModalOpen, setIsFormModalOpen] = useState(false);
     const [editingStudent, setEditingStudent] = useState<Student | null>(null);
     const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
 
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
-        router.get(route('kesantrian.index'), { search }, { preserveState: true });
+        router.get(route('kesantrian.index'), { search, status: statusFilter }, { preserveState: true });
     };
 
     const openCreateModal = () => {
@@ -74,18 +76,38 @@ export default function Index({ auth, students, filters, rooms, guardians }: Stu
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-3 w-full md:w-auto">
-                            <form onSubmit={handleSearch} className="relative flex-1 md:w-64">
-                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <Search className="h-4 w-4 text-gray-400" />
+                        <div className="flex flex-col md:flex-row items-center gap-3 w-full md:w-auto">
+                            <form onSubmit={handleSearch} className="flex flex-col md:flex-row gap-3 w-full">
+                                <div className="relative">
+                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <Filter className="h-4 w-4 text-gray-400" />
+                                    </div>
+                                    <select
+                                        className="pl-10 block w-full md:w-48 border-gray-300 focus:border-primary focus:ring-primary rounded-lg shadow-sm sm:text-sm"
+                                        value={statusFilter}
+                                        onChange={(e) => {
+                                            setStatusFilter(e.target.value);
+                                            router.get(route('kesantrian.index'), { search, status: e.target.value }, { preserveState: true });
+                                        }}
+                                    >
+                                        <option value="">Semua Status</option>
+                                        <option value="aktif">Masih Aktif</option>
+                                        <option value="lulus">Sudah Lulus</option>
+                                        <option value="pindah">Pindah / Boyong</option>
+                                    </select>
                                 </div>
-                                <input
-                                    type="text"
-                                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-primary focus:border-primary sm:text-sm transition duration-150 ease-in-out"
-                                    placeholder="Cari NIS atau Nama..."
-                                    value={search}
-                                    onChange={(e) => setSearch(e.target.value)}
-                                />
+                                <div className="relative flex-1 md:w-64">
+                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <Search className="h-4 w-4 text-gray-400" />
+                                    </div>
+                                    <input
+                                        type="text"
+                                        className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-primary focus:border-primary sm:text-sm transition duration-150 ease-in-out"
+                                        placeholder="Cari NIS, Nama, atau Tahun..."
+                                        value={search}
+                                        onChange={(e) => setSearch(e.target.value)}
+                                    />
+                                </div>
                             </form>
                             <button
                                 onClick={openCreateModal}
@@ -130,13 +152,23 @@ export default function Index({ auth, students, filters, rooms, guardians }: Stu
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <div className="flex items-center">
                                                     <div className="h-10 w-10 shrink-0">
-                                                        <div className="h-10 w-10 rounded-full bg-accent/20 flex items-center justify-center text-primary font-bold">
-                                                            {student.name.charAt(0)}
-                                                        </div>
+                                                        {student.photo ? (
+                                                            <img src={`/storage/${student.photo}`} alt={student.name} className="h-10 w-10 rounded-full object-cover" />
+                                                        ) : (
+                                                            <div className="h-10 w-10 rounded-full bg-accent/20 flex items-center justify-center text-primary font-bold">
+                                                                {student.name.charAt(0)}
+                                                            </div>
+                                                        )}
                                                     </div>
                                                     <div className="ml-4">
                                                         <div className="text-sm font-medium text-gray-900">{student.name}</div>
-                                                        <div className="text-sm text-gray-500 capitalize">{student.gender}</div>
+                                                        <div className="flex items-center gap-2 text-xs text-gray-500 mt-0.5">
+                                                            <span className="capitalize">{student.gender}</span>
+                                                            <span>•</span>
+                                                            <span>Masuk: {new Date(student.enrollment_date).getFullYear()}</span>
+                                                            <span>•</span>
+                                                            <span>Keluar: {student.graduation_year || '-'}</span>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </td>
@@ -201,6 +233,7 @@ export default function Index({ auth, students, filters, rooms, guardians }: Stu
                 show={isFormModalOpen}
                 onClose={() => setIsFormModalOpen(false)}
                 student={editingStudent}
+                dormitories={dormitories}
                 rooms={rooms}
                 guardians={guardians}
             />

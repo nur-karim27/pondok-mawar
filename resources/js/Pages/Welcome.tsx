@@ -103,6 +103,14 @@ export default function Welcome({ canLogin, pesantren }: Props) {
                                 {link.name}
                             </a>
                         ))}
+                        {canLogin && (
+                            <Link
+                                href={route('login')}
+                                className="text-sm font-medium transition-colors text-gray-300 hover:text-white"
+                            >
+                                Masuk
+                            </Link>
+                        )}
                     </div>
 
                     <div className="flex items-center gap-4">
@@ -134,6 +142,14 @@ export default function Welcome({ canLogin, pesantren }: Props) {
                                     {link.name}
                                 </a>
                             ))}
+                            {canLogin && (
+                                <Link 
+                                    href={route('login')}
+                                    className="text-base font-medium text-gray-300 hover:text-white py-2 border-b border-white/5"
+                                >
+                                    Masuk
+                                </Link>
+                            )}
                         </div>
                     </motion.div>
                 )}
@@ -429,13 +445,7 @@ export default function Welcome({ canLogin, pesantren }: Props) {
                                 <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Pendaftaran Santri Baru</a></li>
                                 <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Informasi Akademik</a></li>
                                 <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Alumni</a></li>
-                                <li>
-                                    {canLogin && (
-                                        <Link href={route('login')} className="text-accent hover:text-white transition-colors">
-                                            Login Pengurus &rarr;
-                                        </Link>
-                                    )}
-                                </li>
+
                             </ul>
                         </div>
 
