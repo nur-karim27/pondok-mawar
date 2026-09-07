@@ -42,5 +42,10 @@ class Student extends Model
     {
         return $this->hasMany(StudentViolation::class);
     }
+
+    public function muhafadzohs()
+    {
+        return $this->hasMany(StudentMuhafadzoh::class);
+    }
 }
 

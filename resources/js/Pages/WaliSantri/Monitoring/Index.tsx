@@ -18,7 +18,6 @@ export default function MonitoringSantri({ auth, student }: any) {
 
     return (
         <AuthenticatedLayout
-            user={auth.user}
             header={<h2 className="font-semibold text-xl text-gray-800 leading-tight">Monitoring Santri</h2>}
         >
             <Head title="Monitoring Santri" />

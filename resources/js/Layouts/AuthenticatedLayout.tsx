@@ -1,12 +1,12 @@
 import { Link, usePage } from '@inertiajs/react';
-import { PropsWithChildren, ReactNode, useState } from 'react';
+import { PropsWithChildren, ReactNode, useState, useEffect } from 'react';
 import { 
-    LayoutDashboard, Users, BookOpen, UserCheck, Wallet, 
-    MessageSquare, Menu, X, FileText, Bell, CheckSquare, BrainCircuit,
-    ShieldAlert, FileSignature, CalendarDays, PiggyBank, Coins, Trophy, 
-    ActivitySquare, QrCode, BookOpenCheck, GraduationCap, ShieldCheck
+    LayoutDashboard, Users, BookOpen, Wallet, 
+    Menu, X, FileText, Bell, CheckSquare,
+    BookOpenCheck, GraduationCap, ShieldCheck,
+    CheckCircle, AlertCircle
 } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import ApplicationLogo from '@/Components/ApplicationLogo';
 import Dropdown from '@/Components/Dropdown';
 
@@ -15,10 +15,19 @@ export default function Authenticated({
     children,
 }: PropsWithChildren<{ header?: ReactNode }>) {
     const user = usePage().props.auth.user;
-    const { url } = usePage();
+    const { url, props } = usePage();
+    const flash = (props as any).flash as { success?: string; error?: string } | undefined;
     const [sidebarOpen, setSidebarOpen] = useState(false);
-
+    const [flashVisible, setFlashVisible] = useState(false);
     const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
+
+    useEffect(() => {
+        if (flash?.success || flash?.error) {
+            setFlashVisible(true);
+            const timer = setTimeout(() => setFlashVisible(false), 4000);
+            return () => clearTimeout(timer);
+        }
+    }, [flash]);
 
     const toggleGroup = (name: string) => {
         setOpenGroups(prev => ({ ...prev, [name]: !prev[name] }));
@@ -53,20 +62,20 @@ export default function Authenticated({
         },
         
         {
-            name: 'Kesantrian', icon: BookOpenCheck, current: route().current('kesantrian.*') || route().current('prestasi.*') || route().current('kesehatan.*'), roles: ['Super Admin', 'Kesantrian'],
+            name: 'Kesantrian', icon: BookOpenCheck, current: route().current('kesantrian.*') || route().current('prestasi.*') || route().current('kesehatan.*') || route().current('muhafadzoh.*'), roles: ['Super Admin', 'Kesantrian'],
             children: [
                 { name: 'Biodata Santri', href: route('kesantrian.index'), current: route().current('kesantrian.*'), roles: ['Super Admin', 'Kesantrian'] },
-                { name: 'Absensi Jamaah (Barcode)', href: '#', current: false, roles: ['Super Admin', 'Kesantrian'] },
-                { name: 'Evaluasi Mukhafadoh', href: '#', current: false, roles: ['Super Admin', 'Kesantrian'] },
+                { name: 'Absensi Jamaah (Barcode)', href: route('attendances.jamaah.scan'), current: route().current('attendances.jamaah.*'), roles: ['Super Admin', 'Kesantrian'] },
+                { name: 'Evaluasi Muhafadzoh', href: route('muhafadzoh.index'), current: route().current('muhafadzoh.*'), roles: ['Super Admin', 'Kesantrian'] },
                 { name: 'Prestasi Santri', href: route('prestasi.index'), current: route().current('prestasi.*'), roles: ['Super Admin', 'Kesantrian'] },
                 { name: 'Kesehatan Santri', href: route('kesehatan.index'), current: route().current('kesehatan.*'), roles: ['Super Admin', 'Kesantrian'] },
             ]
         },
         
-        { name: 'Kegiatan Alumni/IKSAMA', href: '#', icon: GraduationCap, current: false, roles: ['Super Admin'] },
+        { name: 'Kegiatan Alumni/IKSAMA', href: route('kegiatan.index'), icon: GraduationCap, current: route().current('kegiatan.*'), roles: ['Super Admin'] },
         
         {
-            name: 'Modul Lainnya', icon: BookOpen, current: false, roles: ['Super Admin', 'Kesantrian'],
+            name: 'Modul Lainnya', icon: BookOpen, current: route().current('staff.*') || route().current('letters.*') || route().current('announcements.*') || route().current('ai.*'), roles: ['Super Admin', 'Kesantrian'],
             children: [
                 { name: 'Asatidz', href: route('staff.index'), current: route().current('staff.*'), roles: ['Super Admin'] },
                 { name: 'Surat & Berkas', href: route('letters.index'), current: route().current('letters.*'), roles: ['Super Admin'] },
@@ -223,6 +232,36 @@ export default function Authenticated({
 
                 {/* Page Content */}
                 <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-background relative">
+                    {/* Flash Notifications */}
+                    <AnimatePresence>
+                        {flashVisible && (flash?.success || flash?.error) && (
+                            <motion.div
+                                initial={{ opacity: 0, y: -20, scale: 0.95 }}
+                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                                transition={{ duration: 0.3 }}
+                                className={`fixed top-6 right-6 z-50 max-w-sm w-full flex items-center gap-3 px-5 py-4 rounded-2xl shadow-2xl border ${
+                                    flash?.success 
+                                        ? 'bg-emerald-600 border-emerald-500 text-white shadow-emerald-500/30' 
+                                        : 'bg-red-600 border-red-500 text-white shadow-red-500/30'
+                                }`}
+                            >
+                                {flash?.success ? (
+                                    <CheckCircle className="w-5 h-5 shrink-0 text-white" />
+                                ) : (
+                                    <AlertCircle className="w-5 h-5 shrink-0 text-white" />
+                                )}
+                                <p className="text-sm font-semibold">{flash?.success || flash?.error}</p>
+                                <button 
+                                    onClick={() => setFlashVisible(false)}
+                                    className="ml-auto text-white/70 hover:text-white transition-colors"
+                                >
+                                    <X className="w-4 h-4" />
+                                </button>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+
                     <motion.div 
                         key={url}
                         initial={{ opacity: 0, y: 15 }}

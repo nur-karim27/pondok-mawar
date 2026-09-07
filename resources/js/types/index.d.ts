@@ -36,6 +36,10 @@ export interface Student {
     guardian_id?: number;
     guardian?: Guardian;
     room?: Room;
+    graduation_year?: string;
+    school_level?: string;
+    quran_level?: string;
+    history?: string;
 }
 
 export type PageProps<

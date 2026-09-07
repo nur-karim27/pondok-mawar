@@ -73,8 +73,7 @@ export default function KesehatanIndex({ auth, records, students }: any) {
 
     return (
         <AuthenticatedLayout
-            user={auth.user}
-            header={<h2 className="font-semibold text-xl text-gray-800 leading-tight">Kelola Riwayat Kesehatan</h2>}
+            header={<h2 className="font-bold text-xl text-gray-800 leading-tight">Layanan Kesehatan Santri</h2>}
         >
             <Head title="Riwayat Kesehatan" />
 

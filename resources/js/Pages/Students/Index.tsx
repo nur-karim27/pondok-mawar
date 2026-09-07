@@ -58,32 +58,34 @@ export default function Index({ auth, students, filters, dormitories, rooms, gua
 
     return (
         <AuthenticatedLayout
-            header={<h2 className="font-semibold text-xl text-gray-800 leading-tight">Data Kesantrian</h2>}
+            header={<h2 className="font-bold text-xl text-gray-800 leading-tight">Manajemen Kesantrian</h2>}
         >
             <Head title="Kesantrian" />
 
-            <div className="py-8">
-                <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
-                    {/* Header Actions */}
-                    <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
-                        <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 bg-primary text-accent rounded-xl flex items-center justify-center shadow-lg shadow-primary/20">
-                                <Users className="w-6 h-6" />
+            <div>
+                {/* Header Banner */}
+                <div className="bg-gradient-to-r from-primary to-emerald-500 rounded-2xl p-6 mb-6 text-white shadow-xl shadow-primary/20 relative overflow-hidden">
+                    <div className="absolute right-0 top-0 w-32 h-32 bg-white/5 rounded-full -translate-y-8 translate-x-8"></div>
+                    <div className="absolute right-16 bottom-0 w-20 h-20 bg-black/10 rounded-full translate-y-6"></div>
+                    <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-5">
+                        <div className="flex items-center gap-4">
+                            <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center border border-white/30 shadow-lg">
+                                <Users className="w-7 h-7 text-white" />
                             </div>
                             <div>
-                                <h1 className="text-2xl font-bold text-gray-900">Daftar Santri</h1>
-                                <p className="text-sm text-gray-500">Total {students.total} santri terdaftar dalam sistem.</p>
+                                <h1 className="text-2xl font-extrabold">Daftar Santri</h1>
+                                <p className="text-white/80 text-sm mt-0.5">Total <span className="font-bold text-white">{students.total}</span> santri terdaftar dalam sistem</p>
                             </div>
                         </div>
 
-                        <div className="flex flex-col md:flex-row items-center gap-3 w-full md:w-auto">
-                            <form onSubmit={handleSearch} className="flex flex-col md:flex-row gap-3 w-full">
+                        <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3">
+                            <form onSubmit={handleSearch} className="flex flex-col md:flex-row gap-3">
                                 <div className="relative">
                                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                        <Filter className="h-4 w-4 text-gray-400" />
+                                        <Filter className="h-4 w-4 text-white/60" />
                                     </div>
                                     <select
-                                        className="pl-10 block w-full md:w-48 border-gray-300 focus:border-primary focus:ring-primary rounded-lg shadow-sm sm:text-sm"
+                                        className="pl-9 pr-4 py-2.5 bg-white/20 border border-white/30 text-white rounded-xl text-sm font-medium placeholder-white/60 focus:outline-none focus:bg-white/30 focus:ring-2 focus:ring-white/50 backdrop-blur-sm w-full md:w-44 [&>option]:text-gray-900 [&>option]:bg-white"
                                         value={statusFilter}
                                         onChange={(e) => {
                                             setStatusFilter(e.target.value);
@@ -98,11 +100,11 @@ export default function Index({ auth, students, filters, dormitories, rooms, gua
                                 </div>
                                 <div className="relative flex-1 md:w-64">
                                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                        <Search className="h-4 w-4 text-gray-400" />
+                                        <Search className="h-4 w-4 text-white/60" />
                                     </div>
                                     <input
                                         type="text"
-                                        className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-primary focus:border-primary sm:text-sm transition duration-150 ease-in-out"
+                                        className="block w-full pl-10 pr-3 py-2.5 bg-white/20 border border-white/30 text-white rounded-xl text-sm placeholder-white/60 focus:outline-none focus:bg-white/30 focus:ring-2 focus:ring-white/50 backdrop-blur-sm"
                                         placeholder="Cari NIS, Nama, atau Tahun..."
                                         value={search}
                                         onChange={(e) => setSearch(e.target.value)}
@@ -111,13 +113,14 @@ export default function Index({ auth, students, filters, dormitories, rooms, gua
                             </form>
                             <button
                                 onClick={openCreateModal}
-                                className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-primary hover:bg-primary-light focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary shadow-md shadow-primary/20 transition-all shrink-0"
+                                className="inline-flex items-center justify-center px-5 py-2.5 bg-accent text-primary font-bold rounded-xl hover:bg-accent/90 shadow-lg shadow-black/20 transition-all shrink-0 text-sm"
                             >
                                 <Plus className="w-4 h-4 mr-2" />
                                 Tambah Santri
                             </button>
                         </div>
                     </div>
+                </div>
 
                     {/* Table Container */}
                     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
@@ -225,7 +228,6 @@ export default function Index({ auth, students, filters, dormitories, rooms, gua
                             <Pagination links={students.links} />
                         </div>
                     </div>
-                </div>
             </div>
 
             {/* Form Modal */}

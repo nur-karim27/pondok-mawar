@@ -3,9 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-
 use Inertia\Inertia;
-
 use App\Models\Attendance;
 use App\Models\Student;
 use Illuminate\Support\Facades\Auth;
@@ -29,23 +27,49 @@ class AttendanceController extends Controller
 
         return Inertia::render('Keamanan/Attendances/Index', [
             'attendances' => $attendances,
-            'students' => $students,
-            'filters' => [
+            'students'    => $students,
+            'filters'     => [
                 'date' => $request->date ?? '',
                 'type' => $request->type ?? 'all',
             ]
         ]);
     }
 
+    public function scan()
+    {
+        $students = Student::where('status', 'aktif')->select('id', 'name', 'nis')->get();
+        return Inertia::render('Keamanan/Attendances/JamaahScan', [
+            'students' => $students,
+        ]);
+    }
+
+    public function storeScan(Request $request)
+    {
+        $validated = $request->validate([
+            'student_id' => 'required|exists:students,id',
+            'date'       => 'required|date',
+            'time'       => 'required|date_format:H:i',
+            'type'       => 'required|in:sekolah,ngaji,kegiatan,asrama',
+            'status'     => 'required|in:hadir,izin,sakit,alpa,terlambat',
+            'notes'      => 'nullable|string',
+        ]);
+
+        $validated['recorded_by'] = Auth::id();
+
+        Attendance::create($validated);
+
+        return redirect()->back()->with('success', 'Absensi berhasil dicatat.');
+    }
+
     public function store(Request $request)
     {
         $validated = $request->validate([
             'student_id' => 'required|exists:students,id',
-            'date' => 'required|date',
-            'time' => 'required|date_format:H:i',
-            'type' => 'required|in:sekolah,ngaji,kegiatan,asrama',
-            'status' => 'required|in:hadir,izin,sakit,alpa,terlambat',
-            'notes' => 'nullable|string'
+            'date'       => 'required|date',
+            'time'       => 'required|date_format:H:i',
+            'type'       => 'required|in:sekolah,ngaji,kegiatan,asrama',
+            'status'     => 'required|in:hadir,izin,sakit,alpa,terlambat',
+            'notes'      => 'nullable|string',
         ]);
 
         $validated['recorded_by'] = Auth::id();
@@ -59,7 +83,7 @@ class AttendanceController extends Controller
     {
         $validated = $request->validate([
             'status' => 'required|in:hadir,izin,sakit,alpa,terlambat',
-            'notes' => 'nullable|string'
+            'notes'  => 'nullable|string',
         ]);
 
         $attendance->update($validated);

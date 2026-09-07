@@ -28,7 +28,6 @@ export default function StudentList({ auth, students, filters }: any) {
 
     return (
         <AuthenticatedLayout
-            user={auth.user}
             header={<h2 className="font-semibold text-xl text-gray-800 leading-tight">Daftar Santri untuk Monitoring</h2>}
         >
             <Head title="Monitoring Santri" />
