@@ -21,13 +21,7 @@ const navLinks = [
     { name: 'Warta Pondok', href: '/berita',        key: 'berita',   Icon: Newspaper },
 ];
 
-const bottomNavItems = [
-    { name: 'Beranda',  href: '/',              key: 'beranda',  Icon: Home },
-    { name: 'Akademik', href: '/akademik',      key: 'akademik', Icon: BookOpen },
-    { name: 'Alumni',   href: '/alumni',        key: 'alumni',   Icon: Users },
-    { name: 'Warta',    href: '/berita',        key: 'berita',   Icon: Newspaper },
-    { name: 'Masuk',    href: '/login',         key: 'masuk',    Icon: LogIn },
-];
+
 
 export default function GuestLayout({ children, pesantren, canLogin = true, activeNav }: GuestLayoutProps) {
     const [scrolled, setScrolled]     = useState(false);
@@ -124,6 +118,19 @@ export default function GuestLayout({ children, pesantren, canLogin = true, acti
                                         </Link>
                                     </motion.div>
                                 ))}
+
+                                {/* Tombol Masuk — style sama persis seperti nav link lain */}
+                                {canLogin && (
+                                    <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: navLinks.length * 0.06 }}>
+                                        <Link
+                                            href={route('login')}
+                                            onClick={() => setMobileOpen(false)}
+                                            className="block px-4 py-3 rounded-xl text-base font-semibold transition-all text-white/80 hover:text-white hover:bg-white/10"
+                                        >
+                                            Masuk
+                                        </Link>
+                                    </motion.div>
+                                )}
                             </div>
                         </motion.div>
                     )}
@@ -131,8 +138,7 @@ export default function GuestLayout({ children, pesantren, canLogin = true, acti
             </motion.nav>
 
             {/* ===================== MAIN CONTENT ===================== */}
-            {/* pb-16 lg:pb-0 = ruang untuk mobile bottom nav */}
-            <main className="flex-1 pb-16 lg:pb-0">
+            <main className="flex-1">
                 {children}
             </main>
 
@@ -265,41 +271,6 @@ export default function GuestLayout({ children, pesantren, canLogin = true, acti
                 </div>
             </footer>
 
-            {/* ===================== MOBILE BOTTOM NAVIGATION (seperti foto 3) ===================== */}
-            <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-100 shadow-[0_-4px_20px_rgba(0,0,0,0.08)]">
-                <div className="flex items-center justify-around py-2 px-2">
-                    {bottomNavItems.map(item => {
-                        const isActive = activeNav === item.key;
-                        const isMasuk  = item.key === 'masuk';
-                        return (
-                            <Link
-                                key={item.key}
-                                href={item.href}
-                                className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-2xl transition-all duration-200 ${
-                                    isActive
-                                        ? 'bg-[#E8F4ED]'
-                                        : isMasuk
-                                            ? 'bg-[#0C3527] rounded-2xl'
-                                            : ''
-                                }`}
-                            >
-                                <item.Icon
-                                    className="w-5 h-5"
-                                    style={{ color: isActive ? GREEN : isMasuk ? 'white' : '#9ca3af' }}
-                                />
-                                <span
-                                    className="text-[9px] font-bold tracking-wide"
-                                    style={{ color: isActive ? GREEN : isMasuk ? 'white' : '#9ca3af' }}
-                                >
-                                    {item.name}
-                                </span>
-                            </Link>
-                        );
-                    })}
-                </div>
-                {/* Safe area for iOS */}
-                <div className="h-safe-area-inset-bottom bg-white" />
-            </nav>
         </div>
     );
 }

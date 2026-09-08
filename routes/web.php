@@ -32,6 +32,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // =========================================================
     // Modul Keamanan
     // =========================================================
+    Route::get('/pelanggaran/export', [\App\Http\Controllers\StudentViolationController::class, 'export'])->name('pelanggaran.export');
+    Route::get('/pelanggaran/santri/{student_id}', [\App\Http\Controllers\StudentViolationController::class, 'getStudentViolations'])->name('pelanggaran.santri');
+    Route::post('/pelanggaran/resolve-all', [\App\Http\Controllers\StudentViolationController::class, 'resolveAll'])->name('pelanggaran.resolveAll');
     Route::resource('pelanggaran', \App\Http\Controllers\StudentViolationController::class);
     Route::post('/pelanggaran/{pelanggaran}/resolve', [\App\Http\Controllers\StudentViolationController::class, 'resolve'])->name('pelanggaran.resolve');
 

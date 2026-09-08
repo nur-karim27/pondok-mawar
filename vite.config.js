@@ -15,6 +15,8 @@ function getLocalIP() {
     return 'localhost';
 }
 
+const LOCAL_IP = getLocalIP();
+
 export default defineConfig({
     plugins: [
         laravel({
@@ -25,9 +27,14 @@ export default defineConfig({
     ],
     server: {
         host: '0.0.0.0',
+        port: 5173,
+        strictPort: true,
         cors: true,
+        allowedHosts: 'all',
         hmr: {
-            host: getLocalIP(),
+            host: LOCAL_IP,
+            port: 5173,
+            clientPort: 5173,
         },
     },
 });
