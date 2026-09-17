@@ -10,24 +10,49 @@ use Illuminate\Support\Facades\DB;
 
 class CanteenController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $canteens = Canteen::withSum(['transactions as total_masuk' => function ($query) {
-                $query->where('transaction_type', 'masuk');
-            }], 'amount')
-            ->withSum(['transactions as total_keluar' => function ($query) {
-                $query->where('transaction_type', 'keluar');
-            }], 'amount')
-            ->orderBy('name')
-            ->get();
+        $search = $request->input('search');
+        $type = $request->input('type', 'semua');
 
-        $canteens->transform(function ($canteen) {
+        $query = Canteen::withSum(['transactions as total_masuk' => function ($q) {
+                $q->where('transaction_type', 'masuk');
+            }], 'amount')
+            ->withSum(['transactions as total_keluar' => function ($q) {
+                $q->where('transaction_type', 'keluar');
+            }], 'amount');
+
+        if ($search) {
+            $query->where('name', 'like', "%{$search}%");
+        }
+
+        if ($type !== 'semua') {
+            $query->where('type', $type);
+        }
+
+        $canteens = $query->orderBy('name')->paginate(15)->withQueryString();
+
+        $canteens->getCollection()->transform(function ($canteen) {
             $canteen->balance = ($canteen->total_masuk ?? 0) - ($canteen->total_keluar ?? 0);
             return $canteen;
         });
 
+        // Global Summary
+        $totalMasuk = CanteenTransaction::where('transaction_type', 'masuk')->sum('amount');
+        $totalKeluar = CanteenTransaction::where('transaction_type', 'keluar')->sum('amount');
+        $totalSaldo = $totalMasuk - $totalKeluar;
+
         return Inertia::render('Keuangan/Kantin/Index', [
-            'canteens' => $canteens
+            'canteens' => $canteens,
+            'summary' => [
+                'total_saldo' => $totalSaldo,
+                'total_masuk' => $totalMasuk,
+                'total_keluar' => $totalKeluar,
+            ],
+            'filters' => [
+                'search' => $search,
+                'type' => $type,
+            ]
         ]);
     }
 
@@ -197,16 +222,28 @@ class CanteenController extends Controller
 
     public function exportBalances(Request $request)
     {
-        $canteens = Canteen::withSum(['transactions as total_masuk' => function ($query) {
-                $query->where('transaction_type', 'masuk');
-            }], 'amount')
-            ->withSum(['transactions as total_keluar' => function ($query) {
-                $query->where('transaction_type', 'keluar');
-            }], 'amount')
-            ->orderBy('name')
-            ->get();
+        $search = $request->input('search');
+        $type = $request->input('type', 'semua');
 
-        $filename = "rekap_saldo_kantin_" . date('Ymd_His') . ".csv";
+        $query = Canteen::withSum(['transactions as total_masuk' => function ($q) {
+                $q->where('transaction_type', 'masuk');
+            }], 'amount')
+            ->withSum(['transactions as total_keluar' => function ($q) {
+                $q->where('transaction_type', 'keluar');
+            }], 'amount');
+
+        if ($search) {
+            $query->where('name', 'like', "%{$search}%");
+        }
+
+        if ($type !== 'semua') {
+            $query->where('type', $type);
+        }
+
+        $canteens = $query->orderBy('name')->get();
+
+        $typeLabel = $type !== 'semua' ? '_' . $type : '';
+        $filename = "rekap_saldo_kantin" . $typeLabel . "_" . date('Ymd_His') . ".csv";
         $headers = array(
             "Content-type"        => "text/csv",
             "Content-Disposition" => "attachment; filename=$filename",

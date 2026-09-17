@@ -28,6 +28,10 @@ Route::get('/berita',       [\App\Http\Controllers\GuestController::class, 'beri
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::post('/notifications/mark-read', function (Illuminate\Http\Request $request) {
+        $request->user()->unreadNotifications->markAsRead();
+        return back();
+    })->name('notifications.markRead');
 
     // =========================================================
     // Modul Keamanan
@@ -39,11 +43,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/pelanggaran/{pelanggaran}/resolve', [\App\Http\Controllers\StudentViolationController::class, 'resolve'])->name('pelanggaran.resolve');
 
     // Perizinan
+    Route::get('/perizinan/export', [\App\Http\Controllers\StudentPermissionController::class, 'export'])->name('perizinan.export');
     Route::resource('perizinan', \App\Http\Controllers\StudentPermissionController::class);
     Route::put('/perizinan/{perizinan}/status', [\App\Http\Controllers\StudentPermissionController::class, 'updateStatus'])->name('perizinan.status');
     Route::get('/perizinan/{perizinan}/cetak', [\App\Http\Controllers\StudentPermissionController::class, 'print'])->name('perizinan.print');
 
     // Absensi
+    Route::get('/absensi/export', [\App\Http\Controllers\AttendanceController::class, 'export'])->name('attendances.export');
     Route::get('absensi/jamaah/scan',   [\App\Http\Controllers\AttendanceController::class, 'scan'])->name('attendances.jamaah.scan');
     Route::post('absensi/jamaah/scan',  [\App\Http\Controllers\AttendanceController::class, 'storeScan'])->name('attendances.jamaah.store');
     Route::resource('absensi', \App\Http\Controllers\AttendanceController::class)->names('attendances')->parameters(['absensi' => 'attendance']);
@@ -51,9 +57,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // =========================================================
     // Modul Kesantrian
     // =========================================================
+    Route::get('/kesantrian/export', [\App\Http\Controllers\StudentController::class, 'export'])->name('kesantrian.export');
     Route::resource('kesantrian', \App\Http\Controllers\StudentController::class)->parameters([
         'kesantrian' => 'student'
     ]);
+
+    Route::post('/academic-histories', [\App\Http\Controllers\AcademicHistoryController::class, 'store'])->name('academic-histories.store');
+    Route::put('/academic-histories/{id}', [\App\Http\Controllers\AcademicHistoryController::class, 'update'])->name('academic-histories.update');
+    Route::delete('/academic-histories/{id}', [\App\Http\Controllers\AcademicHistoryController::class, 'destroy'])->name('academic-histories.destroy');
 
     // Evaluasi Muhafadzoh
     Route::get('/muhafadzoh/export-rekap',     [\App\Http\Controllers\StudentMuhafadzohController::class, 'exportRekapCsv'])->name('muhafadzoh.export-rekap');
@@ -77,6 +88,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // =========================================================
     // Modul Bendahara
     // =========================================================
+    Route::get('/keuangan/export', [\App\Http\Controllers\PaymentController::class, 'export'])->name('payments.export');
+    Route::post('/keuangan/midtrans-token', [\App\Http\Controllers\PaymentController::class, 'midtransToken'])->name('payments.midtransToken');
+    Route::post('/keuangan/generate-monthly', [\App\Http\Controllers\PaymentController::class, 'generateMonthly'])->name('payments.generateMonthly');
     Route::resource('keuangan', \App\Http\Controllers\PaymentController::class)->names('payments')->parameters(['keuangan' => 'payment']);
     Route::get('/api/students/{student}/bills', [\App\Http\Controllers\PaymentController::class, 'getStudentBills'])->name('api.students.bills');
 

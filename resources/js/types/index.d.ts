@@ -6,6 +6,7 @@ export interface User {
     role: string;
     avatar?: string;
     is_active: boolean;
+    unread_notifications?: any[];
 }
 
 export interface Guardian {
@@ -40,6 +41,7 @@ export interface Student {
     school_level?: string;
     quran_level?: string;
     history?: string;
+    academic_histories?: any[];
 }
 
 export type PageProps<

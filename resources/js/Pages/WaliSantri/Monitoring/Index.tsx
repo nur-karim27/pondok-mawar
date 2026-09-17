@@ -194,8 +194,8 @@ export default function MonitoringSantri({ auth, student }: any) {
                                             { label: 'Tahun Keluar',    value: student.graduation_year || 'Masih aktif' },
                                         ]},
                                         { title: 'Akademik & Wali', icon: BookOpen, color: '#8b5cf6', rows: [
-                                            { label: 'Jenjang Sekolah', value: student.school_level || '-' },
-                                            { label: 'Jenjang Ngaji',   value: student.quran_level || '-' },
+                                            { label: 'Tingkat Akademik (Sekolah)', value: student.school_level || '-' },
+                                            { label: 'Tingkat Non-Akademik (Ngaji)',   value: student.quran_level || '-' },
                                             { label: 'Nama Wali',       value: student.guardian?.name || '-' },
                                             { label: 'Alamat',          value: student.address || '-' },
                                         ]},
@@ -228,6 +228,58 @@ export default function MonitoringSantri({ auth, student }: any) {
                                             </motion.div>
                                         );
                                     })}
+                                    
+                                    {student.academic_histories !== undefined && (
+                                        <motion.div initial="hidden" animate="visible" variants={cardVariants}
+                                            className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden mt-2">
+                                            <div className="p-4 flex items-center gap-3 border-b border-gray-50" style={{ background: '#10b98108' }}>
+                                                <div className="p-2 rounded-xl" style={{ background: '#10b98115', color: '#10b981' }}>
+                                                    <BookOpen className="w-5 h-5" />
+                                                </div>
+                                                <h3 className="font-bold text-gray-900">Riwayat Kenaikan Kelas</h3>
+                                            </div>
+                                            
+                                            {(!student.academic_histories || student.academic_histories.length === 0) ? (
+                                                <div className="p-8 text-center bg-gray-50/30">
+                                                    <BookOpen className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                                                    <p className="text-sm font-medium text-gray-500">Belum ada catatan riwayat kenaikan kelas.</p>
+                                                </div>
+                                            ) : (
+                                                <div className="overflow-x-auto">
+                                                    <table className="w-full text-sm text-left">
+                                                        <thead className="text-xs text-gray-500 uppercase bg-gray-50">
+                                                            <tr>
+                                                                <th className="px-5 py-3">Tahun Ajaran</th>
+                                                                <th className="px-5 py-3">Tingkat Akademik</th>
+                                                                <th className="px-5 py-3">Tingkat Ngaji</th>
+                                                                <th className="px-5 py-3 text-center">Status</th>
+                                                                <th className="px-5 py-3">Catatan</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody className="divide-y divide-gray-100">
+                                                            {student.academic_histories.map((hist: any) => (
+                                                                <tr key={hist.id} className="hover:bg-gray-50/50 transition-colors">
+                                                                    <td className="px-5 py-4 font-semibold text-gray-900">{hist.academic_year}</td>
+                                                                    <td className="px-5 py-4 text-gray-600">{hist.school_level || '-'}</td>
+                                                                    <td className="px-5 py-4 text-gray-600">{hist.quran_level || '-'}</td>
+                                                                    <td className="px-5 py-4 text-center">
+                                                                        <span className={`px-2.5 py-1 text-xs font-bold rounded-full ${
+                                                                            hist.status === 'Naik Kelas' ? 'bg-green-100 text-green-700' :
+                                                                            hist.status === 'Lulus' ? 'bg-blue-100 text-blue-700' :
+                                                                            'bg-red-100 text-red-700'
+                                                                        }`}>
+                                                                            {hist.status}
+                                                                        </span>
+                                                                    </td>
+                                                                    <td className="px-5 py-4 text-gray-500 italic text-xs">{hist.notes || '-'}</td>
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            )}
+                                        </motion.div>
+                                    )}
                                 </div>
                             )}
 

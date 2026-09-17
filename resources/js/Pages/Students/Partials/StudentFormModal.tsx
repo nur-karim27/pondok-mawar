@@ -37,8 +37,15 @@ export default function StudentFormModal({ show, onClose, student, dormitories, 
     const [quranLevelSearch, setQuranLevelSearch] = useState('');
     const [showQuranDropdown, setShowQuranDropdown] = useState(false);
 
-    const SCHOOL_LEVELS = ['SD', 'MI', 'SMP', 'MTs', 'SMA', 'SMK', 'MA', 'Kuliah'];
-    const QURAN_LEVELS = ['Jilid 1', 'Jilid 2', 'Jilid 3', 'Jilid 4', 'Jilid 5', 'Jilid 6', 'Al-Quran', 'Kelas 1 Diniyah', 'Kelas 2 Diniyah', 'Kelas 3 Diniyah'];
+    const SCHOOL_LEVELS = [
+        'SD/MI Kelas 1', 'SD/MI Kelas 2', 'SD/MI Kelas 3', 'SD/MI Kelas 4', 'SD/MI Kelas 5', 'SD/MI Kelas 6',
+        'SMP/MTs Kelas 7', 'SMP/MTs Kelas 8', 'SMP/MTs Kelas 9',
+        'SMA/MA/SMK Kelas 10', 'SMA/MA/SMK Kelas 11', 'SMA/MA/SMK Kelas 12'
+    ];
+    const QURAN_LEVELS = [
+        'Jilid 1', 'Jilid 2', 'Jilid 3', 'Jilid 4', 'Jilid 5', 'Jilid 6', 'Al-Quran', 
+        'Diniyah Kelas 1', 'Diniyah Kelas 2', 'Diniyah Kelas 3', 'Diniyah Kelas 4', 'Diniyah Kelas 5', 'Diniyah Kelas 6'
+    ];
 
     const { data, setData, post, processing, errors, reset, clearErrors } = useForm({
         nis: '',
@@ -58,6 +65,10 @@ export default function StudentFormModal({ show, onClose, student, dormitories, 
         guardian_id: '',
         history: '',
         photo: null as File | null,
+        // Optional fields for auto-creating academic history
+        academic_year: '',
+        academic_status: 'Naik Kelas',
+        academic_notes: '',
     });
 
     useEffect(() => {
@@ -80,6 +91,9 @@ export default function StudentFormModal({ show, onClose, student, dormitories, 
                 guardian_id: student.guardian_id ? student.guardian_id.toString() : '',
                 history: student.history || '',
                 photo: null,
+                academic_year: '',
+                academic_status: 'Naik Kelas',
+                academic_notes: '',
             });
             
             // Guardian
@@ -284,7 +298,7 @@ export default function StudentFormModal({ show, onClose, student, dormitories, 
                             </div>
 
                             <div className="col-span-2 relative">
-                                <InputLabel htmlFor="guardian_id" value="Wali Santri" />
+                                <InputLabel htmlFor="guardian_id" value="Nama Wali Santri (Bapak / Ibu)" />
                                 <TextInput
                                     id="guardian_search"
                                     className="mt-1 block w-full"
@@ -387,9 +401,9 @@ export default function StudentFormModal({ show, onClose, student, dormitories, 
                                     required
                                 >
                                     <option value="aktif">Aktif</option>
-                                    <option value="izin">Izin</option>
                                     <option value="lulus">Lulus</option>
-                                    <option value="pindah">Pindah / Boyong</option>
+                                    <option value="pindah">Pindah</option>
+                                    <option value="boyong">Boyong</option>
                                 </select>
                                 <InputError message={errors.status} className="mt-2" />
                             </div>
@@ -464,6 +478,56 @@ export default function StudentFormModal({ show, onClose, student, dormitories, 
                                     </div>
                                 )}
                                 <InputError message={errors.quran_level} className="mt-2" />
+                            </div>
+
+                            <div className="mt-8 border-t border-gray-100 pt-6 col-span-2">
+                                <h4 className="text-sm font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-500"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+                                    Rekam Riwayat Kenaikan Kelas (Opsional)
+                                </h4>
+                                <p className="text-xs text-gray-500 mb-4">
+                                    Isi bagian ini jika Anda ingin sistem otomatis mencatat histori kenaikan kelas santri ke dalam buku riwayat.
+                                </p>
+
+                                <div className="space-y-4 bg-green-50/30 p-4 rounded-xl border border-green-100/50">
+                                    <div>
+                                        <InputLabel htmlFor="academic_year" value="Tahun Ajaran *" />
+                                        <TextInput
+                                            id="academic_year"
+                                            className="mt-1 block w-full text-sm"
+                                            placeholder="Contoh: 2024/2025"
+                                            value={data.academic_year}
+                                            onChange={(e) => setData('academic_year', e.target.value)}
+                                        />
+                                        <p className="text-[11px] text-gray-400 mt-1">Kosongkan jika tidak ingin mencatat riwayat.</p>
+                                    </div>
+
+                                    <div>
+                                        <InputLabel htmlFor="academic_status" value="Status Kenaikan *" />
+                                        <select
+                                            id="academic_status"
+                                            className="mt-1 block w-full border-gray-300 focus:border-primary focus:ring-primary rounded-md shadow-sm text-sm"
+                                            value={data.academic_status}
+                                            onChange={(e) => setData('academic_status', e.target.value)}
+                                        >
+                                            <option value="Naik Kelas">Naik Kelas</option>
+                                            <option value="Tinggal Kelas">Tinggal Kelas</option>
+                                            <option value="Lulus">Lulus</option>
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <InputLabel htmlFor="academic_notes" value="Catatan Kenaikan (Opsional)" />
+                                        <textarea
+                                            id="academic_notes"
+                                            rows={2}
+                                            className="mt-1 block w-full border-gray-300 focus:border-primary focus:ring-primary rounded-md shadow-sm text-sm"
+                                            value={data.academic_notes}
+                                            onChange={(e) => setData('academic_notes', e.target.value)}
+                                            placeholder="Catatan tambahan (contoh: Santri berprestasi)"
+                                        ></textarea>
+                                    </div>
+                                </div>
                             </div>
 
                             <div className="relative">

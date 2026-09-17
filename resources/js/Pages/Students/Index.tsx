@@ -2,9 +2,10 @@ import { useState } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, router } from '@inertiajs/react';
 import { PageProps, Student, Room, Guardian } from '@/types';
-import { Plus, Search, Edit2, Trash2, Users, Filter } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Users, Filter, Download } from 'lucide-react';
 import Pagination from '@/Components/Pagination';
 import StudentFormModal from './Partials/StudentFormModal';
+import AcademicHistoryModal from './Partials/AcademicHistoryModal';
 import DangerButton from '@/Components/DangerButton';
 import SecondaryButton from '@/Components/SecondaryButton';
 import Modal from '@/Components/Modal';
@@ -15,7 +16,7 @@ interface StudentsProps extends PageProps {
         links: any[];
         total: number;
     };
-    filters: { search?: string, status?: string };
+    filters: { search?: string, status?: string, gender?: string };
     dormitories: any[];
     rooms: any[];
     guardians: Guardian[];
@@ -24,13 +25,25 @@ interface StudentsProps extends PageProps {
 export default function Index({ auth, students, filters, dormitories, rooms, guardians }: StudentsProps) {
     const [search, setSearch] = useState(filters.search || '');
     const [statusFilter, setStatusFilter] = useState(filters.status || '');
+    const [genderFilter, setGenderFilter] = useState(filters.gender || 'semua');
     const [isFormModalOpen, setIsFormModalOpen] = useState(false);
     const [editingStudent, setEditingStudent] = useState<Student | null>(null);
     const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
+    const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+    const [studentForHistory, setStudentForHistory] = useState<Student | null>(null);
 
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
-        router.get(route('kesantrian.index'), { search, status: statusFilter }, { preserveState: true });
+        router.get(route('kesantrian.index'), { search, status: statusFilter, gender: genderFilter }, { preserveState: true });
+    };
+
+    const handleGenderFilter = (selectedGender: string) => {
+        setGenderFilter(selectedGender);
+        router.get(route('kesantrian.index'), { search, status: statusFilter, gender: selectedGender }, { preserveState: true });
+    };
+
+    const exportData = () => {
+        window.location.href = route('kesantrian.export', { search, status: statusFilter, gender: genderFilter });
     };
 
     const openCreateModal = () => {
@@ -78,18 +91,18 @@ export default function Index({ auth, students, filters, dormitories, rooms, gua
                             </div>
                         </div>
 
-                        <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3">
-                            <form onSubmit={handleSearch} className="flex flex-col md:flex-row gap-3">
+                        <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-3 w-full lg:w-auto mt-4 lg:mt-0">
+                            <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-3">
                                 <div className="relative">
                                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                         <Filter className="h-4 w-4 text-white/60" />
                                     </div>
                                     <select
-                                        className="pl-9 pr-4 py-2.5 bg-white/20 border border-white/30 text-white rounded-xl text-sm font-medium placeholder-white/60 focus:outline-none focus:bg-white/30 focus:ring-2 focus:ring-white/50 backdrop-blur-sm w-full md:w-44 [&>option]:text-gray-900 [&>option]:bg-white"
+                                        className="pl-9 pr-4 py-2.5 bg-white/20 border border-white/30 text-white rounded-xl text-sm font-medium placeholder-white/60 focus:outline-none focus:bg-white/30 focus:ring-2 focus:ring-white/50 backdrop-blur-sm w-full sm:w-44 [&>option]:text-gray-900 [&>option]:bg-white"
                                         value={statusFilter}
                                         onChange={(e) => {
                                             setStatusFilter(e.target.value);
-                                            router.get(route('kesantrian.index'), { search, status: e.target.value }, { preserveState: true });
+                                            router.get(route('kesantrian.index'), { search, status: e.target.value, gender: genderFilter }, { preserveState: true });
                                         }}
                                     >
                                         <option value="">Semua Status</option>
@@ -98,25 +111,55 @@ export default function Index({ auth, students, filters, dormitories, rooms, gua
                                         <option value="pindah">Pindah / Boyong</option>
                                     </select>
                                 </div>
-                                <div className="relative flex-1 md:w-64">
+                                <div className="relative flex-1 sm:w-48 lg:w-64">
                                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                         <Search className="h-4 w-4 text-white/60" />
                                     </div>
                                     <input
                                         type="text"
                                         className="block w-full pl-10 pr-3 py-2.5 bg-white/20 border border-white/30 text-white rounded-xl text-sm placeholder-white/60 focus:outline-none focus:bg-white/30 focus:ring-2 focus:ring-white/50 backdrop-blur-sm"
-                                        placeholder="Cari NIS, Nama, atau Tahun..."
+                                        placeholder="Cari NIS, Nama..."
                                         value={search}
                                         onChange={(e) => setSearch(e.target.value)}
                                     />
                                 </div>
                             </form>
+
+                            <div className="flex bg-white/20 p-1 rounded-xl border border-white/30 backdrop-blur-sm self-stretch lg:self-auto shrink-0">
+                                <button 
+                                    onClick={() => handleGenderFilter('semua')}
+                                    className={`flex-1 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${genderFilter === 'semua' ? 'bg-white text-gray-900 shadow-sm' : 'text-white hover:bg-white/10'}`}
+                                >
+                                    Semua
+                                </button>
+                                <button 
+                                    onClick={() => handleGenderFilter('putra')}
+                                    className={`flex-1 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${genderFilter === 'putra' ? 'bg-white text-gray-900 shadow-sm' : 'text-white hover:bg-white/10'}`}
+                                >
+                                    Putra
+                                </button>
+                                <button 
+                                    onClick={() => handleGenderFilter('putri')}
+                                    className={`flex-1 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${genderFilter === 'putri' ? 'bg-white text-gray-900 shadow-sm' : 'text-white hover:bg-white/10'}`}
+                                >
+                                    Putri
+                                </button>
+                            </div>
+
+                            <button 
+                                onClick={exportData}
+                                className="inline-flex items-center justify-center px-4 py-2.5 bg-white/20 border border-white/30 text-white font-medium rounded-xl hover:bg-white/30 transition-all shrink-0 text-sm backdrop-blur-sm"
+                            >
+                                <Download className="w-4 h-4 mr-2" />
+                                Export
+                            </button>
+
                             <button
                                 onClick={openCreateModal}
                                 className="inline-flex items-center justify-center px-5 py-2.5 bg-accent text-primary font-bold rounded-xl hover:bg-accent/90 shadow-lg shadow-black/20 transition-all shrink-0 text-sm"
                             >
                                 <Plus className="w-4 h-4 mr-2" />
-                                Tambah Santri
+                                Tambah
                             </button>
                         </div>
                     </div>
@@ -193,6 +236,16 @@ export default function Index({ auth, students, filters, dormitories, rooms, gua
                                             <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                                 <div className="flex justify-end gap-2">
                                                     <button
+                                                        onClick={() => {
+                                                            setStudentForHistory(student);
+                                                            setIsHistoryModalOpen(true);
+                                                        }}
+                                                        className="text-green-600 hover:text-green-700 bg-green-50 hover:bg-green-100 p-2 rounded-lg transition-colors"
+                                                        title="Tambah Riwayat Kenaikan Kelas"
+                                                    >
+                                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+                                                    </button>
+                                                    <button
                                                         onClick={() => openEditModal(student)}
                                                         className="text-gray-400 hover:text-primary bg-gray-50 hover:bg-primary/10 p-2 rounded-lg transition-colors"
                                                         title="Edit Santri"
@@ -238,6 +291,12 @@ export default function Index({ auth, students, filters, dormitories, rooms, gua
                 dormitories={dormitories}
                 rooms={rooms}
                 guardians={guardians}
+            />
+
+            <AcademicHistoryModal
+                show={isHistoryModalOpen}
+                onClose={() => setIsHistoryModalOpen(false)}
+                student={studentForHistory}
             />
 
             {/* Delete Confirmation Modal */}

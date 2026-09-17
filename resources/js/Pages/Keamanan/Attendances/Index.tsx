@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, useForm, router } from '@inertiajs/react';
-import { CalendarDays, Plus, Search, Filter, CheckCircle, XCircle, AlertCircle, Clock } from 'lucide-react';
+import { CalendarDays, Plus, Search, Filter, CheckCircle, XCircle, AlertCircle, Clock, Download, Users, User, Edit, Trash2 } from 'lucide-react';
 import Modal from '@/Components/Modal';
 
 export default function AttendancesIndex({ attendances, students, filters }: any) {
@@ -11,13 +11,16 @@ export default function AttendancesIndex({ attendances, students, filters }: any
 
     const [confirmingDelete, setConfirmingDelete] = useState<number | null>(null);
 
+    const [activeGender, setActiveGender] = useState(filters?.gender || 'semua');
+
     const { data, setData, post, put, processing, reset, errors } = useForm({
         student_id: '',
-        date: filters.date,
+        date: filters?.date || '',
         time: new Date().toTimeString().split(' ')[0].slice(0, 5),
-        type: filters.type === 'all' ? 'sekolah' : filters.type,
+        type: filters?.type === 'all' ? '' : (filters?.type || ''),
         status: 'hadir',
         notes: '',
+        points: '',
     });
 
     const submit = (e: any) => {
@@ -48,6 +51,7 @@ export default function AttendancesIndex({ attendances, students, filters }: any
             type: a.type,
             status: a.status,
             notes: a.notes || '',
+            points: '', // Reset points when editing so they don't accidentally re-add points
         });
         setStudentSearch(`${a.student.name} (${a.student.nis})`);
         setIsCreateModalOpen(true);
@@ -62,8 +66,21 @@ export default function AttendancesIndex({ attendances, students, filters }: any
         }
     };
 
-    const applyFilters = (date: string, type: string) => {
-        router.get(route('attendances.index'), { date, type }, { preserveState: true });
+    const applyFilters = (date: string, type: string, gender: string = activeGender) => {
+        setActiveGender(gender);
+        router.get(route('attendances.index'), { date, type, gender }, { preserveState: true });
+    };
+
+    const handleGenderTab = (gender: string) => {
+        applyFilters(filters.date, filters.type, gender);
+    };
+
+    const handleExport = () => {
+        const url = new URL('/absensi/export', window.location.origin);
+        if (activeGender !== 'semua') url.searchParams.append('gender', activeGender);
+        if (filters.date) url.searchParams.append('date', filters.date);
+        if (filters.type !== 'all') url.searchParams.append('type', filters.type);
+        window.location.href = url.toString();
     };
 
     const filteredAttendances = attendances.data.filter((a: any) => 
@@ -91,6 +108,41 @@ export default function AttendancesIndex({ attendances, students, filters }: any
             header={<h2 className="text-xl font-bold leading-tight text-gray-800">Absensi Santri</h2>}
         >
             <Head title="Absensi Santri" />
+
+            {/* Filter & Export Bar */}
+            <div className="mb-6 flex flex-col md:flex-row gap-4 justify-between items-start md:items-center">
+                {/* Gender Tabs */}
+                <div className="bg-gray-100/80 p-1.5 rounded-xl flex gap-1 w-full md:w-auto overflow-x-auto shadow-inner">
+                    {[
+                        { id: 'semua', label: 'Semua', icon: Users },
+                        { id: 'putra', label: 'Putra', icon: User },
+                        { id: 'putri', label: 'Putri', icon: User },
+                    ].map(tab => (
+                        <button
+                            key={tab.id}
+                            onClick={() => handleGenderTab(tab.id)}
+                            className={`flex items-center justify-center gap-2 px-5 py-2 text-sm font-semibold rounded-lg transition-all duration-300 ${
+                                activeGender === tab.id 
+                                ? 'bg-white text-emerald-600 shadow-sm ring-1 ring-black/5' 
+                                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/50'
+                            }`}
+                        >
+                            <tab.icon className="w-4 h-4" />
+                            {tab.label}
+                        </button>
+                    ))}
+                </div>
+
+                <div className="flex items-center gap-3 w-full md:w-auto">
+                    <button 
+                        onClick={handleExport}
+                        className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-xl hover:from-emerald-600 hover:to-emerald-700 transition-all font-semibold shadow-sm hover:shadow text-sm whitespace-nowrap"
+                    >
+                        <Download className="w-4 h-4" />
+                        Export Excel
+                    </button>
+                </div>
+            </div>
 
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-6">
                 <div className="p-6 border-b border-gray-100 flex flex-col xl:flex-row xl:items-center justify-between gap-4">
@@ -178,8 +230,21 @@ export default function AttendancesIndex({ attendances, students, filters }: any
                             {filteredAttendances.map((a: any) => (
                                 <tr key={a.id} className="hover:bg-gray-50/50 transition-colors">
                                     <td className="px-6 py-4">
-                                        <div className="font-medium text-gray-900 break-words">{a.student.name}</div>
-                                        <div className="text-sm text-gray-500">NIS: {a.student.nis}</div>
+                                        <div className="flex items-center gap-3">
+                                            {a.student.photo ? (
+                                                <img src={`/storage/${a.student.photo}`} alt={a.student.name} className="w-10 h-10 rounded-full object-cover shadow-sm border border-gray-100" />
+                                            ) : (
+                                                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm shrink-0 shadow-sm
+                                                    ${a.student.gender === 'putra' ? 'bg-blue-100 text-blue-700' : 'bg-pink-100 text-pink-700'}`}
+                                                >
+                                                    {a.student.name.substring(0, 2).toUpperCase()}
+                                                </div>
+                                            )}
+                                            <div>
+                                                <div className="font-semibold text-gray-900">{a.student.name}</div>
+                                                <div className="text-xs text-gray-500">NIS: {a.student.nis} • {a.student.gender === 'putra' ? 'Putra' : 'Putri'}</div>
+                                            </div>
+                                        </div>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <div className="text-gray-900">{new Date(a.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
@@ -224,18 +289,20 @@ export default function AttendancesIndex({ attendances, students, filters }: any
                                         <span className="text-sm text-gray-500 break-words">{a.notes || '-'}</span>
                                     </td>
                                     <td className="px-6 py-4 text-right">
-                                        <div className="flex justify-end gap-3">
+                                        <div className="flex justify-end gap-2">
                                             <button 
                                                 onClick={() => handleEdit(a)}
-                                                className="text-sm text-gray-600 hover:text-gray-900 font-medium"
+                                                className="p-2 text-gray-600 bg-gray-50 hover:bg-gray-200 rounded-lg transition-colors"
+                                                title="Edit"
                                             >
-                                                Edit
+                                                <Edit className="w-4 h-4" />
                                             </button>
                                             <button 
                                                 onClick={() => setConfirmingDelete(a.id)}
-                                                className="text-sm text-red-600 hover:text-red-700 font-medium"
+                                                className="p-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
+                                                title="Hapus"
                                             >
-                                                Hapus
+                                                <Trash2 className="w-4 h-4" />
                                             </button>
                                         </div>
                                     </td>
@@ -295,15 +362,26 @@ export default function AttendancesIndex({ attendances, students, filters }: any
                                         {filteredStudentsForDropdown.map((s: any) => (
                                             <li 
                                                 key={s.id} 
-                                                className="relative cursor-default select-none py-2 pl-3 pr-9 hover:bg-emerald-50 text-gray-900 cursor-pointer"
+                                                className="relative cursor-default select-none py-2 px-4 hover:bg-emerald-50 text-gray-900 cursor-pointer"
                                                 onMouseDown={(e) => {
                                                     e.preventDefault();
                                                     selectStudent(s);
                                                 }}
                                             >
-                                                <div className="flex items-center">
-                                                    <span className="font-medium truncate">{s.name}</span>
-                                                    <span className="ml-2 truncate text-gray-500">({s.nis})</span>
+                                                <div className="flex items-center gap-3">
+                                                    {s.photo ? (
+                                                        <img src={`/storage/${s.photo}`} alt={s.name} className="w-8 h-8 rounded-full object-cover" />
+                                                    ) : (
+                                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0
+                                                            ${s.gender === 'putra' ? 'bg-blue-100 text-blue-700' : 'bg-pink-100 text-pink-700'}`}
+                                                        >
+                                                            {s.name.substring(0, 2).toUpperCase()}
+                                                        </div>
+                                                    )}
+                                                    <div>
+                                                        <span className="font-medium text-gray-900 block">{s.name}</span>
+                                                        <span className="text-xs text-gray-500 block">{s.nis}</span>
+                                                    </div>
                                                 </div>
                                             </li>
                                         ))}
@@ -333,7 +411,22 @@ export default function AttendancesIndex({ attendances, students, filters }: any
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Jam Absen</label>
+                                <div className="flex justify-between items-end mb-1">
+                                    <label className="block text-sm font-medium text-gray-700">Jam Absen</label>
+                                    <button 
+                                        type="button"
+                                        onClick={() => {
+                                            const current = new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000);
+                                            setData(d => ({
+                                                ...d, 
+                                                time: current.toISOString().slice(11, 16)
+                                            }));
+                                        }}
+                                        className="text-[10px] text-emerald-600 hover:text-emerald-800 font-medium px-2 py-0.5 bg-emerald-50 rounded"
+                                    >
+                                        Waktu Saat Ini
+                                    </button>
+                                </div>
                                 <input 
                                     type="time"
                                     value={data.time}
@@ -347,17 +440,15 @@ export default function AttendancesIndex({ attendances, students, filters }: any
 
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Jenis Absensi</label>
-                            <select 
+                            <input 
+                                type="text"
                                 value={data.type}
                                 onChange={e => setData('type', e.target.value)}
                                 className="w-full rounded-lg border-gray-300 focus:border-emerald-500 focus:ring-emerald-500"
                                 disabled={editingId !== null}
-                            >
-                                <option value="sekolah">Sekolah</option>
-                                <option value="ngaji">Madin / Ngaji</option>
-                                <option value="kegiatan">Kegiatan</option>
-                                <option value="asrama">Asrama</option>
-                            </select>
+                                placeholder="Misal: Sekolah, Jamaah Isya, Madin, dll."
+                                required
+                            />
                         </div>
 
                         <div>
@@ -379,6 +470,23 @@ export default function AttendancesIndex({ attendances, students, filters }: any
                                 ))}
                             </div>
                         </div>
+
+                        {(data.status === 'alpa' || data.status === 'terlambat') && (
+                            <div className="p-3 bg-red-50/50 rounded-lg border border-red-100">
+                                <label className="block text-sm font-medium text-red-700 mb-1">Poin Pelanggaran</label>
+                                <input 
+                                    type="number"
+                                    min="0"
+                                    value={data.points}
+                                    onChange={e => setData('points', e.target.value)}
+                                    className="w-full rounded-lg border-red-200 focus:border-red-500 focus:ring-red-500 text-red-700"
+                                    placeholder="Masukkan jumlah poin (Opsional)"
+                                />
+                                <p className="text-[11px] text-red-500 mt-1.5 leading-tight">
+                                    Isi angka poin jika ingin memberikan poin pelanggaran otomatis untuk absen ini (misal: 5). Kosongkan jika tidak ada.
+                                </p>
+                            </div>
+                        )}
 
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Keterangan <span className="text-gray-400 font-normal">(Opsional)</span></label>

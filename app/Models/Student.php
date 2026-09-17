@@ -33,6 +33,11 @@ class Student extends Model
         return $this->hasMany(StudentAchievement::class);
     }
 
+    public function academicHistories()
+    {
+        return $this->hasMany(AcademicHistory::class)->orderBy('academic_year', 'desc');
+    }
+
     public function healthRecords()
     {
         return $this->hasMany(StudentHealthRecord::class);

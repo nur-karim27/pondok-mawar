@@ -1,4 +1,4 @@
-import { Link, usePage } from '@inertiajs/react';
+import { Link, usePage, router } from '@inertiajs/react';
 import { PropsWithChildren, ReactNode, useState, useEffect } from 'react';
 import { 
     LayoutDashboard, Users, BookOpen, Wallet, 
@@ -198,10 +198,48 @@ export default function Authenticated({
                     </div>
 
                     <div className="flex items-center gap-4">
-                        <button className="relative p-2 text-gray-400 hover:text-primary hover:bg-accent/20 rounded-full transition-colors">
-                            <Bell className="h-5 w-5" />
-                            <span className="absolute top-1 right-1 h-2.5 w-2.5 bg-red-500 rounded-full border-2 border-white"></span>
-                        </button>
+                        <Dropdown>
+                            <Dropdown.Trigger>
+                                <button className="relative p-2 text-gray-400 hover:text-primary hover:bg-accent/20 rounded-full transition-colors focus:outline-none">
+                                    <Bell className="h-5 w-5" />
+                                    {user.unread_notifications && user.unread_notifications.length > 0 && (
+                                        <span className="absolute top-1 right-1 h-2.5 w-2.5 bg-red-500 rounded-full border-2 border-white animate-pulse"></span>
+                                    )}
+                                </button>
+                            </Dropdown.Trigger>
+
+                            <Dropdown.Content align="right" width="64">
+                                <div className="px-4 py-3 border-b border-gray-100 flex justify-between items-center bg-gray-50/80">
+                                    <p className="text-sm font-semibold text-gray-900">Notifikasi</p>
+                                    {user.unread_notifications && user.unread_notifications.length > 0 && (
+                                        <button 
+                                            onClick={() => router.post(route('notifications.markRead'), {}, { preserveScroll: true })}
+                                            className="text-xs text-primary hover:text-primary-light font-medium"
+                                        >
+                                            Tandai semua dibaca
+                                        </button>
+                                    )}
+                                </div>
+                                <div className="max-h-80 overflow-y-auto">
+                                    {user.unread_notifications && user.unread_notifications.length > 0 ? (
+                                        user.unread_notifications.map((notif: any) => (
+                                            <Link 
+                                                key={notif.id}
+                                                href={notif.data.url || '#'}
+                                                className="block px-4 py-3 hover:bg-gray-50 border-b border-gray-50 last:border-0 transition-colors"
+                                            >
+                                                <p className="text-sm text-gray-800">{notif.data.message}</p>
+                                                <p className="text-xs text-gray-400 mt-1">{new Date(notif.created_at).toLocaleDateString('id-ID', { hour: '2-digit', minute: '2-digit' })}</p>
+                                            </Link>
+                                        ))
+                                    ) : (
+                                        <div className="px-4 py-6 text-center text-sm text-gray-500">
+                                            Tidak ada notifikasi baru.
+                                        </div>
+                                    )}
+                                </div>
+                            </Dropdown.Content>
+                        </Dropdown>
 
                         <Dropdown>
                             <Dropdown.Trigger>

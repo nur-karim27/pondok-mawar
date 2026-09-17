@@ -63,7 +63,8 @@ export default function StudentList({ auth, students, filters }: any) {
                                         <option value="">Semua Status</option>
                                         <option value="aktif">Masih Aktif</option>
                                         <option value="lulus">Sudah Lulus</option>
-                                        <option value="pindah">Pindah / Boyong</option>
+                                        <option value="pindah">Pindah</option>
+                                        <option value="boyong">Boyong</option>
                                     </select>
                                 </div>
                                 <div className="relative w-full md:w-80 flex gap-2">
@@ -111,9 +112,9 @@ export default function StudentList({ auth, students, filters }: any) {
                                     <div className="flex-1 min-w-0 pr-8">
                                         <h4 className="text-base font-bold text-gray-900 truncate">{student.name}</h4>
                                         <p className="text-xs text-gray-500 mt-1 truncate">NIS: {student.nis} • {student.room?.name || '-'}</p>
-                                        <div className="mt-2 text-xs text-gray-400">
-                                            <p>Masuk: {new Date(student.enrollment_date).getFullYear()}</p>
-                                            <p>Keluar: {student.graduation_year || '-'}</p>
+                                        <div className="mt-2 text-xs text-gray-600 space-y-0.5">
+                                            <p><span className="font-semibold">Sekolah:</span> {student.school_level || '-'}</p>
+                                            <p><span className="font-semibold">Ngaji:</span> {student.quran_level || '-'}</p>
                                         </div>
                                     </div>
                                 </div>

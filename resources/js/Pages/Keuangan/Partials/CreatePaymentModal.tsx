@@ -4,6 +4,7 @@ import axios from 'axios';
 import { Dialog, Transition } from '@headlessui/react';
 import { Fragment } from 'react';
 import { X } from 'lucide-react';
+import Select from 'react-select';
 
 interface Student {
     id: number;
@@ -85,6 +86,16 @@ export default function CreatePaymentModal({ isOpen, onClose, students }: Props)
         onClose();
     };
 
+    const studentOptions = students.map(s => ({
+        value: s.id,
+        label: `${s.nis} - ${s.name}`
+    }));
+
+    const billOptions = studentBills.map(b => ({
+        value: b.id.toString(),
+        label: `${b.payment_type?.name} ${b.billing_month ? `(${b.billing_month} ${b.billing_year})` : ''} - Kurang: Rp ${Number(b.remaining).toLocaleString('id-ID')}`
+    }));
+
     return (
         <Transition appear show={isOpen} as={Fragment}>
             <Dialog as="div" className="relative z-50" onClose={handleClose}>
@@ -111,7 +122,7 @@ export default function CreatePaymentModal({ isOpen, onClose, students }: Props)
                             leaveFrom="opacity-100 scale-100"
                             leaveTo="opacity-0 scale-95"
                         >
-                            <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all">
+                            <Dialog.Panel className="w-full max-w-md transform overflow-visible rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all">
                                 <Dialog.Title
                                     as="h3"
                                     className="text-lg font-medium leading-6 text-gray-900 flex justify-between items-center"
@@ -124,43 +135,37 @@ export default function CreatePaymentModal({ isOpen, onClose, students }: Props)
                                 
                                 <form onSubmit={handleSubmit} className="mt-4 space-y-4">
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700">Santri</label>
-                                        <select 
-                                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
-                                            value={selectedStudent}
-                                            onChange={(e) => {
-                                                setSelectedStudent(Number(e.target.value));
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Santri</label>
+                                        <Select
+                                            options={studentOptions}
+                                            placeholder="Ketik untuk mencari santri..."
+                                            value={studentOptions.find(opt => opt.value === selectedStudent) || null}
+                                            onChange={(option) => {
+                                                setSelectedStudent(option ? option.value : '');
                                                 setData('student_bill_id', '');
                                             }}
-                                        >
-                                            <option value="">Pilih Santri...</option>
-                                            {students.map(s => (
-                                                <option key={s.id} value={s.id}>{s.nis} - {s.name}</option>
-                                            ))}
-                                        </select>
+                                            isClearable
+                                            className="react-select-container"
+                                            classNamePrefix="react-select"
+                                        />
                                     </div>
 
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700">Tagihan</label>
-                                        <select
-                                            id="student_bill_id"
-                                            className="mt-1 block w-full border-gray-300 focus:border-emerald-500 focus:ring-emerald-500 rounded-md shadow-sm"
-                                            value={data.student_bill_id}
-                                            onChange={(e) => setData('student_bill_id', e.target.value)}
-                                            required
-                                            disabled={!selectedStudent || loadingBills || studentBills.length === 0}
-                                        >
-                                            <option value="">
-                                                {!selectedStudent ? 'Pilih Santri Dulu...' : 
-                                                 loadingBills ? 'Memuat tagihan...' : 
-                                                 studentBills.length === 0 ? 'Semua tagihan lunas (Tidak ada tunggakan)' : 'Pilih Tagihan...'}
-                                            </option>
-                                            {studentBills.map(b => (
-                                                <option key={b.id} value={b.id}>
-                                                    {b.payment_type?.name} {b.billing_month ? `(${b.billing_month} ${b.billing_year})` : ''} - Sisa: Rp {Number(b.remaining).toLocaleString('id-ID')}
-                                                </option>
-                                            ))}
-                                        </select>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Tagihan</label>
+                                        <Select
+                                            options={billOptions}
+                                            placeholder={
+                                                !selectedStudent ? 'Pilih Santri Dulu...' : 
+                                                loadingBills ? 'Memuat tagihan...' : 
+                                                studentBills.length === 0 ? 'Semua tagihan lunas (Tidak ada tunggakan)' : 'Ketik untuk mencari tagihan...'
+                                            }
+                                            value={billOptions.find(opt => opt.value === data.student_bill_id) || null}
+                                            onChange={(option) => setData('student_bill_id', option ? option.value : '')}
+                                            isDisabled={!selectedStudent || loadingBills || studentBills.length === 0}
+                                            isClearable
+                                            className="react-select-container"
+                                            classNamePrefix="react-select"
+                                        />
                                         {errors.student_bill_id && <p className="mt-1 text-sm text-red-600">{errors.student_bill_id}</p>}
                                     </div>
 
@@ -186,6 +191,7 @@ export default function CreatePaymentModal({ isOpen, onClose, students }: Props)
                                             <option value="tunai">Tunai</option>
                                             <option value="transfer">Transfer Bank</option>
                                             <option value="qris">QRIS / E-Wallet</option>
+                                            <option value="midtrans_sandbox">Midtrans (Sandbox)</option>
                                         </select>
                                         {errors.payment_method && <p className="mt-1 text-sm text-red-600">{errors.payment_method}</p>}
                                     </div>
@@ -222,7 +228,7 @@ export default function CreatePaymentModal({ isOpen, onClose, students }: Props)
                                         </button>
                                         <button
                                             type="submit"
-                                            disabled={processing}
+                                            disabled={processing || !data.student_bill_id}
                                             className="inline-flex justify-center rounded-md border border-transparent bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 focus:outline-none disabled:opacity-50"
                                         >
                                             {processing ? 'Menyimpan...' : 'Simpan Pemasukan'}

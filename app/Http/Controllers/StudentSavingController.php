@@ -12,15 +12,29 @@ class StudentSavingController extends Controller
 {
     public function index(Request $request)
     {
-        // Calculate balance for each student
-        $students = Student::withSum(['savingTransactions as total_setor' => function ($query) {
-                $query->where('transaction_type', 'setor');
+        $search = $request->input('search');
+        $gender = $request->input('gender', 'semua');
+
+        $query = Student::withSum(['savingTransactions as total_setor' => function ($q) {
+                $q->where('transaction_type', 'setor');
             }], 'amount')
-            ->withSum(['savingTransactions as total_tarik' => function ($query) {
-                $query->where('transaction_type', 'tarik');
+            ->withSum(['savingTransactions as total_tarik' => function ($q) {
+                $q->where('transaction_type', 'tarik');
             }], 'amount')
-            ->orderBy('name')
-            ->paginate(15);
+            ->where('status', 'aktif');
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('nis', 'like', "%{$search}%");
+            });
+        }
+
+        if ($gender !== 'semua') {
+            $query->where('gender', $gender);
+        }
+
+        $students = $query->orderBy('name')->paginate(15)->withQueryString();
 
         $students->getCollection()->transform(function ($student) {
             $student->balance = ($student->total_setor ?? 0) - ($student->total_tarik ?? 0);
@@ -38,6 +52,10 @@ class StudentSavingController extends Controller
                 'total_saldo' => $totalSaldo,
                 'total_setor' => $totalSetor,
                 'total_tarik' => $totalTarik,
+            ],
+            'filters' => [
+                'search' => $search,
+                'gender' => $gender,
             ]
         ]);
     }
@@ -177,16 +195,32 @@ class StudentSavingController extends Controller
 
     public function exportBalances(Request $request)
     {
-        $students = Student::withSum(['savingTransactions as total_setor' => function ($query) {
-                $query->where('transaction_type', 'setor');
-            }], 'amount')
-            ->withSum(['savingTransactions as total_tarik' => function ($query) {
-                $query->where('transaction_type', 'tarik');
-            }], 'amount')
-            ->orderBy('name')
-            ->get();
+        $search = $request->input('search');
+        $gender = $request->input('gender', 'semua');
 
-        $filename = "rekap_saldo_tabungan_" . date('Ymd_His') . ".csv";
+        $query = Student::withSum(['savingTransactions as total_setor' => function ($q) {
+                $q->where('transaction_type', 'setor');
+            }], 'amount')
+            ->withSum(['savingTransactions as total_tarik' => function ($q) {
+                $q->where('transaction_type', 'tarik');
+            }], 'amount')
+            ->where('status', 'aktif');
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('nis', 'like', "%{$search}%");
+            });
+        }
+
+        if ($gender !== 'semua') {
+            $query->where('gender', $gender);
+        }
+
+        $students = $query->orderBy('name')->get();
+
+        $genderLabel = $gender !== 'semua' ? '_' . $gender : '';
+        $filename = "rekap_saldo_tabungan" . $genderLabel . "_" . date('Ymd_His') . ".csv";
         $headers = array(
             "Content-type"        => "text/csv",
             "Content-Disposition" => "attachment; filename=$filename",

@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, useForm, router } from '@inertiajs/react';
-import { ShieldAlert, Plus, Search, CheckCircle, AlertTriangle, XCircle, Clock } from 'lucide-react';
+import { ShieldAlert, Plus, Search, CheckCircle, AlertTriangle, XCircle, Clock, Download, Users, User, Check, X, Printer, Edit, Trash2, ChevronDown } from 'lucide-react';
 import Modal from '@/Components/Modal';
 
-export default function PermissionsIndex({ permissions, students }: any) {
+export default function PermissionsIndex({ permissions, students, filters }: any) {
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [editingId, setEditingId] = useState<number | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
@@ -12,12 +12,29 @@ export default function PermissionsIndex({ permissions, students }: any) {
     const [confirmingStatus, setConfirmingStatus] = useState<{ id: number, status: string, title: string } | null>(null);
     const [confirmingDelete, setConfirmingDelete] = useState<number | null>(null);
 
+    const [activeGender, setActiveGender] = useState(filters?.gender || 'semua');
+
+    const handleGenderTab = (gender: string) => {
+        setActiveGender(gender);
+        router.get(route('perizinan.index'), { gender }, { preserveState: true, preserveScroll: true, replace: true });
+    };
+
+    const handleExport = () => {
+        const url = new URL('/perizinan/export', window.location.origin);
+        if (activeGender !== 'semua') url.searchParams.append('gender', activeGender);
+        window.location.href = url.toString();
+    };
+
+    const nowLocal = new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000);
+    const currentDateStr = nowLocal.toISOString().slice(0, 10);
+    const currentTimeStr = nowLocal.toISOString().slice(11, 16);
+
     const { data, setData, post, put, processing, reset, errors, transform } = useForm({
         student_id: '',
-        permission_type: 'Keluar Pondok',
+        permission_type: '',
         reason: '',
-        leave_date_input: new Date().toLocaleDateString('en-CA'),
-        leave_time_input: new Date().toTimeString().split(' ')[0].slice(0, 5),
+        leave_date_input: currentDateStr,
+        leave_time_input: currentTimeStr,
         return_date_input: '',
         return_time_input: '',
     });
@@ -106,6 +123,41 @@ export default function PermissionsIndex({ permissions, students }: any) {
         >
             <Head title="Perizinan Santri" />
 
+            {/* Filter & Export Bar */}
+            <div className="mb-6 flex flex-col md:flex-row gap-4 justify-between items-start md:items-center">
+                {/* Gender Tabs */}
+                <div className="bg-gray-100/80 p-1.5 rounded-xl flex gap-1 w-full md:w-auto overflow-x-auto shadow-inner">
+                    {[
+                        { id: 'semua', label: 'Semua', icon: Users },
+                        { id: 'putra', label: 'Putra', icon: User },
+                        { id: 'putri', label: 'Putri', icon: User },
+                    ].map(tab => (
+                        <button
+                            key={tab.id}
+                            onClick={() => handleGenderTab(tab.id)}
+                            className={`flex items-center justify-center gap-2 px-5 py-2 text-sm font-semibold rounded-lg transition-all duration-300 ${
+                                activeGender === tab.id 
+                                ? 'bg-white text-blue-600 shadow-sm ring-1 ring-black/5' 
+                                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/50'
+                            }`}
+                        >
+                            <tab.icon className="w-4 h-4" />
+                            {tab.label}
+                        </button>
+                    ))}
+                </div>
+
+                <div className="flex items-center gap-3 w-full md:w-auto">
+                    <button 
+                        onClick={handleExport}
+                        className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-xl hover:from-emerald-600 hover:to-emerald-700 transition-all font-semibold shadow-sm hover:shadow text-sm whitespace-nowrap"
+                    >
+                        <Download className="w-4 h-4" />
+                        Export Excel
+                    </button>
+                </div>
+            </div>
+
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-6">
                 <div className="p-6 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div className="flex items-center gap-4">
@@ -132,7 +184,13 @@ export default function PermissionsIndex({ permissions, students }: any) {
                         <button 
                             onClick={() => {
                                 setEditingId(null);
+                                const current = new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000);
                                 reset();
+                                setData(d => ({
+                                    ...d,
+                                    leave_date_input: current.toISOString().slice(0, 10),
+                                    leave_time_input: current.toISOString().slice(11, 16)
+                                }));
                                 setIsCreateModalOpen(true);
                                 setStudentSearch('');
                             }}
@@ -159,8 +217,21 @@ export default function PermissionsIndex({ permissions, students }: any) {
                             {filteredPermissions.map((p: any) => (
                                 <tr key={p.id} className="hover:bg-gray-50/50 transition-colors">
                                     <td className="px-6 py-4">
-                                        <div className="font-medium text-gray-900 break-words">{p.student.name}</div>
-                                        <div className="text-sm text-gray-500">NIS: {p.student.nis}</div>
+                                        <div className="flex items-center gap-3">
+                                            {p.student.photo ? (
+                                                <img src={`/storage/${p.student.photo}`} alt={p.student.name} className="w-10 h-10 rounded-full object-cover shadow-sm border border-gray-100" />
+                                            ) : (
+                                                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm shrink-0 shadow-sm
+                                                    ${p.student.gender === 'putra' ? 'bg-blue-100 text-blue-700' : 'bg-pink-100 text-pink-700'}`}
+                                                >
+                                                    {p.student.name.substring(0, 2).toUpperCase()}
+                                                </div>
+                                            )}
+                                            <div>
+                                                <div className="font-semibold text-gray-900">{p.student.name}</div>
+                                                <div className="text-xs text-gray-500">NIS: {p.student.nis} • {p.student.gender === 'putra' ? 'Putra' : 'Putri'}</div>
+                                            </div>
+                                        </div>
                                     </td>
                                     <td className="px-6 py-4">
                                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium whitespace-nowrap
@@ -174,78 +245,95 @@ export default function PermissionsIndex({ permissions, students }: any) {
                                         <div className="text-sm text-gray-500 break-words mt-1">{p.reason}</div>
                                     </td>
                                     <td className="px-6 py-4 text-gray-500 whitespace-nowrap">
-                                        <div>{new Date(p.leave_date).toLocaleString('id-ID', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
+                                        <div className="flex items-center gap-1.5 text-sm font-medium text-gray-700">
+                                            <Clock className="w-3.5 h-3.5 text-gray-400" />
+                                            {new Date(p.leave_date).toLocaleString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                        </div>
                                         {p.return_date && (
-                                            <div className="text-xs mt-1">s/d {new Date(p.return_date).toLocaleString('id-ID', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
+                                            <div className="flex items-center gap-1.5 text-xs text-gray-500 mt-1 pl-5">
+                                                s/d {new Date(p.return_date).toLocaleString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                            </div>
                                         )}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         {p.status === 'diajukan' && (
-                                            <span className="inline-flex items-center gap-1 text-sm text-blue-600 font-medium">
-                                                <Clock className="w-4 h-4" /> Menunggu Persetujuan
+                                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-100">
+                                                <Clock className="w-3.5 h-3.5" /> Menunggu Persetujuan
                                             </span>
                                         )}
                                         {p.status === 'disetujui' && (
-                                            <span className="inline-flex items-center gap-1 text-sm text-green-600 font-medium">
-                                                <CheckCircle className="w-4 h-4" /> Disetujui (Belum Kembali)
-                                            </span>
+                                            p.return_date && new Date(p.return_date) < new Date() ? (
+                                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-100 shadow-sm animate-pulse">
+                                                    <AlertTriangle className="w-3.5 h-3.5" /> Terlambat Kembali
+                                                </span>
+                                            ) : (
+                                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-100">
+                                                    <CheckCircle className="w-3.5 h-3.5" /> Disetujui (Belum Kembali)
+                                                </span>
+                                            )
                                         )}
                                         {p.status === 'ditolak' && (
-                                            <span className="inline-flex items-center gap-1 text-sm text-red-600 font-medium">
-                                                <XCircle className="w-4 h-4" /> Ditolak
+                                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-red-50 text-red-700 border border-red-100">
+                                                <XCircle className="w-3.5 h-3.5" /> Ditolak
                                             </span>
                                         )}
                                         {p.status === 'selesai' && (
-                                            <span className="inline-flex items-center gap-1 text-sm text-gray-500 font-medium">
-                                                <CheckCircle className="w-4 h-4" /> Selesai (Sudah Kembali)
+                                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-700 border border-gray-200">
+                                                <CheckCircle className="w-3.5 h-3.5" /> Selesai
                                             </span>
                                         )}
                                     </td>
                                     <td className="px-6 py-4 text-right">
-                                        <div className="flex flex-col items-end gap-2">
+                                        <div className="flex items-center justify-end gap-2">
                                             {p.status === 'diajukan' && (
                                                 <>
                                                     <button 
                                                         onClick={() => setConfirmingStatus({ id: p.id, status: 'disetujui', title: 'Setujui Izin' })}
-                                                        className="text-sm text-green-600 hover:text-green-700 font-medium"
+                                                        className="p-2 text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors"
+                                                        title="Setujui"
                                                     >
-                                                        Setujui
+                                                        <Check className="w-4 h-4" />
                                                     </button>
                                                     <button 
                                                         onClick={() => setConfirmingStatus({ id: p.id, status: 'ditolak', title: 'Tolak Izin' })}
-                                                        className="text-sm text-orange-600 hover:text-orange-700 font-medium"
+                                                        className="p-2 text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg transition-colors"
+                                                        title="Tolak"
                                                     >
-                                                        Tolak
+                                                        <X className="w-4 h-4" />
                                                     </button>
                                                 </>
                                             )}
                                             {p.status === 'disetujui' && (
                                                 <button 
                                                     onClick={() => setConfirmingStatus({ id: p.id, status: 'selesai', title: 'Tandai Selesai (Santri Kembali)' })}
-                                                    className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                                                    className="p-2 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
+                                                    title="Tandai Santri Kembali (Selesai)"
                                                 >
-                                                    Tandai Selesai
+                                                    <CheckCircle className="w-4 h-4" />
                                                 </button>
                                             )}
                                             <a 
                                                 href={route('perizinan.print', p.id)}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
-                                                className="text-sm text-purple-600 hover:text-purple-700 font-medium"
+                                                className="p-2 text-purple-600 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors"
+                                                title="Cetak Surat Izin"
                                             >
-                                                Cetak
+                                                <Printer className="w-4 h-4" />
                                             </a>
                                             <button 
                                                 onClick={() => handleEdit(p)}
-                                                className="text-sm text-gray-600 hover:text-gray-900 font-medium"
+                                                className="p-2 text-gray-600 bg-gray-50 hover:bg-gray-200 rounded-lg transition-colors"
+                                                title="Edit"
                                             >
-                                                Edit
+                                                <Edit className="w-4 h-4" />
                                             </button>
                                             <button 
                                                 onClick={() => setConfirmingDelete(p.id)}
-                                                className="text-sm text-red-600 hover:text-red-700 font-medium"
+                                                className="p-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
+                                                title="Hapus"
                                             >
-                                                Hapus
+                                                <Trash2 className="w-4 h-4" />
                                             </button>
                                         </div>
                                     </td>
@@ -290,15 +378,26 @@ export default function PermissionsIndex({ permissions, students }: any) {
                                     {filteredStudentsForDropdown.map((s: any) => (
                                         <li 
                                             key={s.id} 
-                                            className="relative cursor-default select-none py-2 pl-3 pr-9 hover:bg-blue-50 text-gray-900 cursor-pointer"
+                                            className="relative cursor-default select-none py-2 px-4 hover:bg-blue-50 text-gray-900 cursor-pointer"
                                             onMouseDown={(e) => {
                                                 e.preventDefault();
                                                 selectStudent(s);
                                             }}
                                         >
-                                            <div className="flex items-center">
-                                                <span className="font-medium truncate">{s.name}</span>
-                                                <span className="ml-2 truncate text-gray-500">({s.nis})</span>
+                                            <div className="flex items-center gap-3">
+                                                {s.photo ? (
+                                                    <img src={`/storage/${s.photo}`} alt={s.name} className="w-8 h-8 rounded-full object-cover" />
+                                                ) : (
+                                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0
+                                                        ${s.gender === 'putra' ? 'bg-blue-100 text-blue-700' : 'bg-pink-100 text-pink-700'}`}
+                                                    >
+                                                        {s.name.substring(0, 2).toUpperCase()}
+                                                    </div>
+                                                )}
+                                                <div>
+                                                    <span className="font-medium text-gray-900 block">{s.name}</span>
+                                                    <span className="text-xs text-gray-500 block">{s.nis}</span>
+                                                </div>
                                             </div>
                                         </li>
                                     ))}
@@ -309,40 +408,55 @@ export default function PermissionsIndex({ permissions, students }: any) {
 
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Jenis Izin</label>
-                            <select 
+                            <input 
+                                type="text"
                                 value={data.permission_type}
                                 onChange={e => setData('permission_type', e.target.value)}
                                 className="w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                            >
-                                <option value="Keluar Pondok">Keluar Pondok</option>
-                                <option value="Pulang">Pulang</option>
-                                <option value="Sekolah">Sekolah</option>
-                                <option value="Madin">Madin</option>
-                            </select>
+                                placeholder="Misal: Keluar Pondok, Pulang, Sakit, dll."
+                                required
+                            />
+                            {errors.permission_type && <p className="text-sm text-red-600 mt-1">{errors.permission_type}</p>}
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Tanggal Keluar</label>
-                                <input 
-                                    type="date"
-                                    value={data.leave_date_input}
-                                    onChange={e => setData('leave_date_input', e.target.value)}
-                                    className="w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500 bg-gray-50"
-                                    required
-                                />
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Tanggal Keluar</label>
+                                    <input 
+                                        type="date"
+                                        value={data.leave_date_input}
+                                        onChange={e => setData('leave_date_input', e.target.value)}
+                                        className="w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500 bg-gray-50"
+                                        required
+                                    />
+                                </div>
+                                <div>
+                                    <div className="flex justify-between items-end mb-1">
+                                        <label className="block text-sm font-medium text-gray-700">Jam Keluar</label>
+                                        <button 
+                                            type="button"
+                                            onClick={() => {
+                                                const current = new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000);
+                                                setData(d => ({
+                                                    ...d, 
+                                                    leave_date_input: current.toISOString().slice(0, 10),
+                                                    leave_time_input: current.toISOString().slice(11, 16)
+                                                }));
+                                            }}
+                                            className="text-[10px] text-blue-600 hover:text-blue-800 font-medium px-2 py-0.5 bg-blue-50 rounded"
+                                        >
+                                            Waktu Saat Ini
+                                        </button>
+                                    </div>
+                                    <input 
+                                        type="time"
+                                        value={data.leave_time_input}
+                                        onChange={e => setData('leave_time_input', e.target.value)}
+                                        className="w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500 bg-gray-50"
+                                        required
+                                    />
+                                </div>
                             </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Jam Keluar</label>
-                                <input 
-                                    type="time"
-                                    value={data.leave_time_input}
-                                    onChange={e => setData('leave_time_input', e.target.value)}
-                                    className="w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500 bg-gray-50"
-                                    required
-                                />
-                            </div>
-                        </div>
 
                         <div className="grid grid-cols-2 gap-4">
                             <div>

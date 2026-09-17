@@ -1,10 +1,11 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import { PageProps } from '@/types';
 import { useState } from 'react';
-import { Banknote, CreditCard, Wallet, Plus, Download, ReceiptText, Pencil } from 'lucide-react';
+import { Banknote, CreditCard, Wallet, Plus, Download, ReceiptText, Pencil, ScanLine, User } from 'lucide-react';
 import CreatePaymentModal from './Partials/CreatePaymentModal';
 import EditPaymentModal from './Partials/EditPaymentModal';
+import axios from 'axios';
 
 interface Payment {
     id: number;
@@ -14,7 +15,7 @@ interface Payment {
     payment_method: string;
     student_bill: {
         id: number;
-        student: { id: number; name: string; nis: string };
+        student: { id: number; name: string; nis: string; gender: string; photo: string | null };
         payment_type: { name: string };
     };
     received_by: { name: string } | null;
@@ -29,7 +30,7 @@ interface UnpaidBill {
     billing_month: string | null;
     billing_year: string | null;
     payment_type: { name: string };
-    student: { name: string; nis: string };
+    student: { id: number, name: string; nis: string; gender: string; photo: string | null };
 }
 
 interface Summary {
@@ -42,16 +43,75 @@ interface Student {
     id: number;
     name: string;
     nis: string;
+    gender: string;
+    photo: string | null;
 }
 
-export default function KeuanganIndex({ auth, payments, summary, unpaid_bills, students }: PageProps<{ payments: { data: Payment[] }, summary: Summary, unpaid_bills: UnpaidBill[], students: Student[] }>) {
+export default function KeuanganIndex({ auth, payments, summary, unpaid_bills, students, filters }: PageProps<{ payments: { data: Payment[] }, summary: Summary, unpaid_bills: UnpaidBill[], students: Student[], filters: any }>) {
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [editingPayment, setEditingPayment] = useState<Payment | null>(null);
+    const [currentGender, setCurrentGender] = useState(filters?.gender || 'semua');
+    const [isProcessingSnap, setIsProcessingSnap] = useState<number | null>(null);
 
     const handleEdit = (payment: Payment) => {
         setEditingPayment(payment);
         setIsEditModalOpen(true);
+    };
+
+    const handleGenderChange = (gender: string) => {
+        setCurrentGender(gender);
+        router.get(route('payments.index'), { gender }, { preserveState: true, preserveScroll: true });
+    };
+
+    const exportData = () => {
+        window.location.href = route('payments.export', { gender: currentGender });
+    };
+
+    const handleMidtransPayment = async (bill: UnpaidBill) => {
+        try {
+            setIsProcessingSnap(bill.id);
+            const res = await axios.post(route('payments.midtransToken'), {
+                student_bill_id: bill.id,
+                amount: bill.remaining
+            });
+
+            if (res.data.token) {
+                // @ts-ignore
+                window.snap.pay(res.data.token, {
+                    onSuccess: function(result: any) {
+                        // Normally you wait for webhook, but for sandbox UI:
+                        router.post(route('payments.store'), {
+                            student_bill_id: bill.id,
+                            amount: bill.remaining,
+                            payment_method: 'midtrans_sandbox',
+                            payment_date: new Date().toISOString().split('T')[0],
+                            notes: `Paid via Midtrans Sandbox (Order ID: ${result.order_id})`
+                        });
+                    },
+                    onPending: function(result: any) {
+                        alert('Menunggu pembayaran Anda!');
+                    },
+                    onError: function(result: any) {
+                        alert('Pembayaran gagal!');
+                    },
+                    onClose: function() {
+                        setIsProcessingSnap(null);
+                    }
+                });
+            }
+        } catch (error: any) {
+            alert('Gagal mengambil token Midtrans: ' + error?.response?.data?.error || error.message);
+            setIsProcessingSnap(null);
+        }
+    };
+
+    const getPhotoUrl = (photoPath: string | null) => {
+        if (photoPath) {
+            if (photoPath.startsWith('http')) return photoPath;
+            return `/storage/${photoPath}`;
+        }
+        return null;
     };
 
     return (
@@ -63,6 +123,23 @@ export default function KeuanganIndex({ auth, payments, summary, unpaid_bills, s
             <div className="py-12">
                 <div className="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
                     
+                    {/* Filter Tabs */}
+                    <div className="bg-white p-1 rounded-xl shadow-sm border border-gray-100 inline-flex">
+                        {(['semua', 'putra', 'putri'] as const).map((gender) => (
+                            <button
+                                key={gender}
+                                onClick={() => handleGenderChange(gender)}
+                                className={`px-6 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                                    currentGender === gender
+                                        ? 'bg-green-50 text-green-700 shadow-sm'
+                                        : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                                }`}
+                            >
+                                {gender === 'semua' ? 'Semua Santri' : `Santri ${gender.charAt(0).toUpperCase() + gender.slice(1)}`}
+                            </button>
+                        ))}
+                    </div>
+
                     {/* Summary Cards */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div className="bg-white overflow-hidden shadow-sm rounded-xl p-6 border border-gray-100 flex items-center gap-4">
@@ -105,9 +182,23 @@ export default function KeuanganIndex({ auth, payments, summary, unpaid_bills, s
                                     Riwayat Uang Masuk
                                 </h3>
                                 <div className="flex gap-3">
-                                    <button className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 shadow-sm transition-all">
+                                    <button 
+                                        onClick={() => {
+                                            if(confirm('Buat tagihan SPP bulanan untuk semua santri bulan ini?')) {
+                                                router.post(route('payments.generateMonthly'));
+                                            }
+                                        }}
+                                        className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg text-sm font-medium text-blue-700 hover:bg-blue-100 shadow-sm transition-all"
+                                    >
+                                        <Wallet className="w-4 h-4" />
+                                        Buat Tagihan Bulan Ini
+                                    </button>
+                                    <button 
+                                        onClick={exportData}
+                                        className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 shadow-sm transition-all"
+                                    >
                                         <Download className="w-4 h-4" />
-                                        Export
+                                        Export Excel
                                     </button>
                                     <button 
                                         onClick={() => setIsCreateModalOpen(true)}
@@ -142,9 +233,20 @@ export default function KeuanganIndex({ auth, payments, summary, unpaid_bills, s
                                                     {new Date(payment.payment_date).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}
                                                 </td>
                                                 <td className="px-6 py-4">
-                                                    <div>
-                                                        <p className="text-gray-900 font-medium">{payment.student_bill?.student?.name}</p>
-                                                        <p className="text-xs text-gray-500">{payment.student_bill?.student?.nis}</p>
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="h-10 w-10 shrink-0">
+                                                            {getPhotoUrl(payment.student_bill?.student?.photo) ? (
+                                                                <img className="h-10 w-10 rounded-full object-cover border border-gray-200" src={getPhotoUrl(payment.student_bill?.student?.photo)!} alt="" />
+                                                            ) : (
+                                                                <div className="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center border border-gray-200">
+                                                                    <User className="h-5 w-5 text-gray-400" />
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-gray-900 font-medium">{payment.student_bill?.student?.name}</p>
+                                                            <p className="text-xs text-gray-500">{payment.student_bill?.student?.nis}</p>
+                                                        </div>
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-4 text-gray-900">
@@ -160,8 +262,8 @@ export default function KeuanganIndex({ auth, payments, summary, unpaid_bills, s
                                                     }`}>
                                                         {payment.payment_method === 'tunai' && <Banknote className="w-3.5 h-3.5" />}
                                                         {payment.payment_method === 'transfer' && <CreditCard className="w-3.5 h-3.5" />}
-                                                        {payment.payment_method === 'qris' && <Wallet className="w-3.5 h-3.5" />}
-                                                        {payment.payment_method}
+                                                        {(payment.payment_method === 'qris' || payment.payment_method === 'midtrans_sandbox') && <ScanLine className="w-3.5 h-3.5" />}
+                                                        {payment.payment_method.replace('_', ' ')}
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4 text-right font-medium text-gray-900">
@@ -179,7 +281,7 @@ export default function KeuanganIndex({ auth, payments, summary, unpaid_bills, s
                                             </tr>
                                         )) : (
                                             <tr>
-                                                <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
+                                                <td colSpan={7} className="px-6 py-8 text-center text-gray-500">
                                                     Belum ada data uang masuk.
                                                 </td>
                                             </tr>
@@ -207,17 +309,29 @@ export default function KeuanganIndex({ auth, payments, summary, unpaid_bills, s
                                             <th className="px-6 py-4 rounded-tl-lg">Santri</th>
                                             <th className="px-6 py-4">Jenis Tagihan</th>
                                             <th className="px-6 py-4">Bulan/Tahun</th>
-                                            <th className="px-6 py-4">Total Tagihan</th>
+                                            <th className="px-6 py-4 text-right">Total Tagihan</th>
                                             <th className="px-6 py-4 text-right">Minus / Kurang (Rp)</th>
+                                            <th className="px-6 py-4 text-center">Aksi Bayar</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {unpaid_bills.length > 0 ? unpaid_bills.map((bill) => (
                                             <tr key={bill.id} className="bg-white border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
                                                 <td className="px-6 py-4">
-                                                    <div>
-                                                        <p className="text-gray-900 font-medium">{bill.student?.name}</p>
-                                                        <p className="text-xs text-gray-500">{bill.student?.nis}</p>
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="h-10 w-10 shrink-0">
+                                                            {getPhotoUrl(bill.student?.photo) ? (
+                                                                <img className="h-10 w-10 rounded-full object-cover border border-gray-200" src={getPhotoUrl(bill.student?.photo)!} alt="" />
+                                                            ) : (
+                                                                <div className="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center border border-gray-200">
+                                                                    <User className="h-5 w-5 text-gray-400" />
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-gray-900 font-medium">{bill.student?.name}</p>
+                                                            <p className="text-xs text-gray-500">{bill.student?.nis}</p>
+                                                        </div>
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-4 text-gray-900">
@@ -229,16 +343,32 @@ export default function KeuanganIndex({ auth, payments, summary, unpaid_bills, s
                                                 <td className="px-6 py-4 text-gray-500">
                                                     {bill.billing_month ? `${bill.billing_month} ${bill.billing_year}` : '-'}
                                                 </td>
-                                                <td className="px-6 py-4 text-gray-900">
+                                                <td className="px-6 py-4 text-right text-gray-900">
                                                     Rp {Number(bill.amount).toLocaleString('id-ID')}
                                                 </td>
                                                 <td className="px-6 py-4 text-right font-bold text-red-600">
                                                     - Rp {Number(bill.remaining).toLocaleString('id-ID')}
                                                 </td>
+                                                <td className="px-6 py-4 text-center">
+                                                    <button 
+                                                        onClick={() => handleMidtransPayment(bill)}
+                                                        disabled={isProcessingSnap === bill.id}
+                                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-medium hover:bg-blue-700 shadow-sm transition-all disabled:opacity-50"
+                                                    >
+                                                        {isProcessingSnap === bill.id ? (
+                                                            'Memproses...'
+                                                        ) : (
+                                                            <>
+                                                                <ScanLine className="w-3.5 h-3.5" />
+                                                                Bayar Online
+                                                            </>
+                                                        )}
+                                                    </button>
+                                                </td>
                                             </tr>
                                         )) : (
                                             <tr>
-                                                <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
+                                                <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
                                                     Alhamdulillah, tidak ada santri yang menunggak pembayaran.
                                                 </td>
                                             </tr>
