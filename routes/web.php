@@ -33,6 +33,42 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return back();
     })->name('notifications.markRead');
 
+    Route::post('/notifications/update-prefs', function (Illuminate\Http\Request $request) {
+        $data = $request->validate([
+            'schedule_id' => 'required|exists:activity_schedules,id',
+            'is_enabled' => 'required|boolean'
+        ]);
+
+        \App\Models\UserSchedulePref::updateOrCreate(
+            ['user_id' => $request->user()->id, 'schedule_id' => $data['schedule_id']],
+            ['is_enabled' => $data['is_enabled']]
+        );
+
+        return back();
+    })->name('notifications.updatePrefs');
+
+    Route::post('/notifications/billing-prefs', function (Illuminate\Http\Request $request) {
+        $data = $request->validate(['receive_billing_notifications' => 'required|boolean']);
+        $request->user()->update(['receive_billing_notifications' => $data['receive_billing_notifications']]);
+        return back();
+    })->name('notifications.billingPrefs');
+
+    Route::post('/push/subscribe', function (Illuminate\Http\Request $request) {
+        $request->user()->updatePushSubscription(
+            $request->endpoint,
+            $request->keys['p256dh'],
+            $request->keys['auth']
+        );
+        return response()->json(['success' => true]);
+    })->name('push.subscribe');
+
+    Route::get('/notifications/poll', function (Illuminate\Http\Request $request) {
+        $user = $request->user();
+        if (!$user) return response()->json(['unread' => []]);
+        $unread = $user->unreadNotifications()->latest()->take(10)->get();
+        return response()->json(['unread' => $unread]);
+    })->name('notifications.poll');
+
     // =========================================================
     // Modul Keamanan
     // =========================================================
@@ -61,6 +97,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('kesantrian', \App\Http\Controllers\StudentController::class)->parameters([
         'kesantrian' => 'student'
     ]);
+
+    Route::resource('activity-schedules', \App\Http\Controllers\ActivityScheduleController::class)->except(['create', 'show', 'edit']);
+    Route::post('/activity-schedules/{schedule}/notify', function (\App\Models\ActivitySchedule $schedule) {
+        $users = \App\Models\User::where('role', '!=', 'Wali Santri')->get();
+        \Illuminate\Support\Facades\Notification::send($users, new \App\Notifications\ActivityStartedNotification($schedule));
+        return back()->with('success', "Notifikasi test untuk '{$schedule->name}' berhasil dikirim ke semua pengurus!");
+    })->name('activity-schedules.notify');
 
     Route::post('/academic-histories', [\App\Http\Controllers\AcademicHistoryController::class, 'store'])->name('academic-histories.store');
     Route::put('/academic-histories/{id}', [\App\Http\Controllers\AcademicHistoryController::class, 'update'])->name('academic-histories.update');

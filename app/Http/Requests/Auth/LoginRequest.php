@@ -61,11 +61,19 @@ class LoginRequest extends FormRequest
             // Find student by user_id (since user_id in students table links to the Wali Santri login account)
             $student = \App\Models\Student::where('user_id', $user->id)->first();
             
-            // Block login if student has graduated or moved
-            if ($student && in_array($student->status, ['lulus', 'pindah', 'nonaktif'])) {
+            // Block login if student status is boyong or nonaktif
+            if ($student && in_array($student->status, ['boyong', 'nonaktif'])) {
                 Auth::logout();
                 throw ValidationException::withMessages([
-                    'name' => 'Akun dinonaktifkan karena santri sudah Lulus atau Boyong/Pindah.',
+                    'name' => 'Akun dinonaktifkan karena status santri adalah Boyong atau Nonaktif.',
+                ]);
+            }
+            
+            // Also check is_active flag if exists
+            if (!$user->is_active) {
+                Auth::logout();
+                throw ValidationException::withMessages([
+                    'name' => 'Akun Anda telah dinonaktifkan.',
                 ]);
             }
         }

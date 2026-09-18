@@ -1,25 +1,46 @@
 import { Link, usePage, router } from '@inertiajs/react';
-import { PropsWithChildren, ReactNode, useState, useEffect } from 'react';
+import { PropsWithChildren, ReactNode, useState, useEffect, useRef } from 'react';
 import { 
     LayoutDashboard, Users, BookOpen, Wallet, 
     Menu, X, FileText, Bell, CheckSquare,
     BookOpenCheck, GraduationCap, ShieldCheck,
-    CheckCircle, AlertCircle
+    CheckCircle, AlertCircle, Settings, Moon, Sun,
+    Mosque, Calendar, School, BookMarked, ChevronDown
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ApplicationLogo from '@/Components/ApplicationLogo';
 import Dropdown from '@/Components/Dropdown';
+import axios from 'axios';
+
+type NotifCounts = {
+    sholat_jamaah: number;
+    kegiatan: number;
+    sekolah: number;
+    madin: number;
+    other: number;
+    total: number;
+};
+
+const ACTIVITY_TYPE_CONFIG: Record<string, { label: string; color: string; bg: string; icon: React.ElementType }> = {
+    sholat_jamaah: { label: 'Sholat Jamaah', color: 'text-emerald-600', bg: 'bg-emerald-50 border-emerald-200', icon: Mosque },
+    kegiatan:      { label: 'Kegiatan',       color: 'text-blue-600',    bg: 'bg-blue-50 border-blue-200',    icon: Calendar },
+    sekolah:       { label: 'Sekolah',         color: 'text-indigo-600',  bg: 'bg-indigo-50 border-indigo-200', icon: School },
+    madin:         { label: 'Madin',           color: 'text-amber-600',   bg: 'bg-amber-50 border-amber-200',  icon: BookMarked },
+};
 
 export default function Authenticated({
     header,
     children,
 }: PropsWithChildren<{ header?: ReactNode }>) {
-    const user = usePage().props.auth.user;
+    const user = usePage().props.auth.user as any;
     const { url, props } = usePage();
     const flash = (props as any).flash as { success?: string; error?: string } | undefined;
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [flashVisible, setFlashVisible] = useState(false);
     const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
+    const [inAppNotif, setInAppNotif] = useState<any>(null); // For fallback popup
+
+    const notifCounts: NotifCounts = user?.notif_counts ?? { sholat_jamaah: 0, kegiatan: 0, sekolah: 0, madin: 0, other: 0, total: 0 };
 
     useEffect(() => {
         if (flash?.success || flash?.error) {
@@ -29,6 +50,141 @@ export default function Authenticated({
         }
     }, [flash]);
 
+    // Convert base64 VAPID to Uint8Array
+    const urlBase64ToUint8Array = (base64String: string) => {
+        const padding = '='.repeat((4 - base64String.length % 4) % 4);
+        const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+        const rawData = window.atob(base64);
+        const outputArray = new Uint8Array(rawData.length);
+        for (let i = 0; i < rawData.length; ++i) {
+            outputArray[i] = rawData.charCodeAt(i);
+        }
+        return outputArray;
+    };
+
+    // Request Notification permission & Subscribe to Web Push (requires HTTPS)
+    useEffect(() => {
+        const subscribePush = async () => {
+            if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+            
+            try {
+                // Register Service Worker
+                const registration = await navigator.serviceWorker.register('/sw.js');
+                
+                // Request permission
+                const permission = await Notification.requestPermission();
+                if (permission !== 'granted') return;
+
+                // Subscribe to PushManager
+                const vapidPublicKey = usePage().props.vapid_public_key as string;
+                if (!vapidPublicKey) return;
+
+                const convertedVapidKey = urlBase64ToUint8Array(vapidPublicKey);
+                let subscription = await registration.pushManager.getSubscription();
+                
+                if (!subscription) {
+                    subscription = await registration.pushManager.subscribe({
+                        userVisibleOnly: true,
+                        applicationServerKey: convertedVapidKey
+                    });
+                }
+
+                // Send subscription to server
+                await axios.post(route('push.subscribe'), subscription);
+                console.log("Web Push Subscribed Successfully");
+            } catch (err) {
+                console.error("Service Worker / Push Subscription failed:", err);
+            }
+        };
+
+        if (window.isSecureContext) {
+            subscribePush();
+        } else {
+            // Warn user if on HTTP local IP
+            console.warn("Background Push Notifications require HTTPS or localhost. Currently running in Insecure Context.");
+        }
+    }, []);
+
+    const playNotificationSound = () => {
+        try {
+            const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+            if (!AudioContext) return;
+            
+            const ctx = new AudioContext();
+            const osc = ctx.createOscillator();
+            const gainNode = ctx.createGain();
+            
+            osc.connect(gainNode);
+            gainNode.connect(ctx.destination);
+            
+            // Create a pleasant "ding" sound
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(523.25, ctx.currentTime); // C5
+            osc.frequency.exponentialRampToValueAtTime(1046.50, ctx.currentTime + 0.1); // Jump to C6
+            
+            gainNode.gain.setValueAtTime(0, ctx.currentTime);
+            gainNode.gain.linearRampToValueAtTime(0.5, ctx.currentTime + 0.05);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1);
+            
+            osc.start(ctx.currentTime);
+            osc.stop(ctx.currentTime + 1);
+        } catch (e) {
+            console.error("Audio generation failed", e);
+        }
+    };
+
+    // Polling logic for Push Notifications
+    useEffect(() => {
+        if (!user || user.role === 'Wali Santri') return;
+
+        const checkNotifications = async () => {
+            try {
+                const response = await axios.get(route('notifications.poll'));
+                const newUnread = response.data.unread || [];
+                
+                const lastKnownId = localStorage.getItem('last_notif_id');
+                if (newUnread.length > 0) {
+                    const latest = newUnread[0];
+                    if (latest.id !== lastKnownId) {
+                        localStorage.setItem('last_notif_id', latest.id);
+                        
+                        // 1. Selalu mainkan suara notifikasi
+                        playNotificationSound();
+                        
+                        // 2. Trigger Native Notification if allowed & secure
+                        if ('Notification' in window && window.isSecureContext && Notification.permission === 'granted') {
+                            new Notification(latest.data.title || 'Notifikasi Baru', {
+                                body: latest.data.message || 'Ada pemberitahuan baru.',
+                                icon: '/favicon.ico'
+                            });
+                        } else {
+                            // 3. Fallback: Show In-App Popup if native is blocked (e.g. HTTP LAN)
+                            setInAppNotif(latest);
+                            setTimeout(() => setInAppNotif(null), 10000); // hide after 10s
+                        }
+                        
+                        // Soft reload to update the bell icon count
+                        router.reload({ only: ['auth'] });
+                    }
+                }
+            } catch (e) {
+                console.error('Polling error', e);
+            }
+        };
+
+        const interval = setInterval(checkNotifications, 10000); // Check every 10s for faster response
+        return () => clearInterval(interval);
+    }, [user]);
+
+    // Auto-open sidebar groups based on current route
+    useEffect(() => {
+        const initialOpen: Record<string, boolean> = {};
+        navigation.forEach(item => {
+            if (item.current) initialOpen[item.name] = true;
+        });
+        setOpenGroups(initialOpen);
+    }, []);
+
     const toggleGroup = (name: string) => {
         setOpenGroups(prev => ({ ...prev, [name]: !prev[name] }));
     };
@@ -37,16 +193,16 @@ export default function Authenticated({
         { name: 'Dashboard', href: route('dashboard'), icon: LayoutDashboard, current: route().current('dashboard'), roles: ['Super Admin', 'Keamanan', 'Bendahara', 'Wali Santri', 'Kesantrian'] },
         
         { 
-            name: 'Keamanan', icon: ShieldCheck, current: route().current('pelanggaran.*') || route().current('perizinan.*') || route().current('attendances.*'), roles: ['Super Admin', 'Keamanan'],
+            name: 'Keamanan', icon: ShieldCheck, current: route().current('pelanggaran.*') || route().current('perizinan.*') || (route().current('attendances.*') && !route().current('attendances.jamaah.*')), roles: ['Super Admin', 'Keamanan'],
             children: [
                 { name: 'Pelanggaran & Poin', href: route('pelanggaran.index'), current: route().current('pelanggaran.*'), roles: ['Super Admin', 'Keamanan'] },
                 { name: 'Perizinan', href: route('perizinan.index'), current: route().current('perizinan.*'), roles: ['Super Admin', 'Keamanan'] },
-                { name: 'Absensi', href: route('attendances.index'), current: route().current('attendances.*'), roles: ['Super Admin', 'Keamanan'] },
+                { name: 'Absensi', href: route('attendances.index'), current: (route().current('attendances.*') && !route().current('attendances.jamaah.*')), roles: ['Super Admin', 'Keamanan'] },
             ]
         },
         
         {
-            name: 'Bendahara', icon: Wallet, current: route().current('payments.*') || route().current('tabungan.*'), roles: ['Super Admin', 'Bendahara'],
+            name: 'Bendahara', icon: Wallet, current: route().current('payments.*') || route().current('tabungan.*') || route().current('kantin.*'), roles: ['Super Admin', 'Bendahara'],
             children: [
                 { name: 'Uang Masuk / Rekap', href: route('payments.index'), current: route().current('payments.*'), roles: ['Super Admin', 'Bendahara'] },
                 { name: 'Tabungan Santri', href: route('tabungan.index'), current: route().current('tabungan.*'), roles: ['Super Admin', 'Bendahara'] },
@@ -62,7 +218,7 @@ export default function Authenticated({
         },
         
         {
-            name: 'Kesantrian', icon: BookOpenCheck, current: route().current('kesantrian.*') || route().current('prestasi.*') || route().current('kesehatan.*') || route().current('muhafadzoh.*'), roles: ['Super Admin', 'Kesantrian'],
+            name: 'Kesantrian', icon: BookOpenCheck, current: route().current('kesantrian.*') || route().current('prestasi.*') || route().current('kesehatan.*') || route().current('muhafadzoh.*') || route().current('attendances.jamaah.*'), roles: ['Super Admin', 'Kesantrian'],
             children: [
                 { name: 'Biodata Santri', href: route('kesantrian.index'), current: route().current('kesantrian.*'), roles: ['Super Admin', 'Kesantrian'] },
                 { name: 'Absensi Jamaah (Barcode)', href: route('attendances.jamaah.scan'), current: route().current('attendances.jamaah.*'), roles: ['Super Admin', 'Kesantrian'] },
@@ -84,6 +240,8 @@ export default function Authenticated({
             ]
         }
     ].filter(item => item.roles.includes(user.role));
+
+    const showNotifBadges = user.role !== 'Wali Santri';
 
     return (
         <div className="h-screen bg-background flex flex-col md:flex-row font-sans overflow-hidden">
@@ -161,7 +319,7 @@ export default function Authenticated({
                                 </div>
                             ) : (
                                 <Link
-                                    href={item.href}
+                                    href={(item as any).href}
                                     className={`
                                         flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group
                                         ${item.current 
@@ -197,43 +355,64 @@ export default function Authenticated({
                         )}
                     </div>
 
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                        {/* Notification Bell Dropdown */}
                         <Dropdown>
                             <Dropdown.Trigger>
                                 <button className="relative p-2 text-gray-400 hover:text-primary hover:bg-accent/20 rounded-full transition-colors focus:outline-none">
                                     <Bell className="h-5 w-5" />
-                                    {user.unread_notifications && user.unread_notifications.length > 0 && (
+                                    {notifCounts.total > 0 && (
                                         <span className="absolute top-1 right-1 h-2.5 w-2.5 bg-red-500 rounded-full border-2 border-white animate-pulse"></span>
                                     )}
                                 </button>
                             </Dropdown.Trigger>
 
-                            <Dropdown.Content align="right" width="64">
+                            <Dropdown.Content align="right" width="80">
+                                {/* Notif Header */}
                                 <div className="px-4 py-3 border-b border-gray-100 flex justify-between items-center bg-gray-50/80">
-                                    <p className="text-sm font-semibold text-gray-900">Notifikasi</p>
-                                    {user.unread_notifications && user.unread_notifications.length > 0 && (
-                                        <button 
-                                            onClick={() => router.post(route('notifications.markRead'), {}, { preserveScroll: true })}
-                                            className="text-xs text-primary hover:text-primary-light font-medium"
-                                        >
-                                            Tandai semua dibaca
-                                        </button>
-                                    )}
-                                </div>
-                                <div className="max-h-80 overflow-y-auto">
-                                    {user.unread_notifications && user.unread_notifications.length > 0 ? (
-                                        user.unread_notifications.map((notif: any) => (
-                                            <Link 
-                                                key={notif.id}
-                                                href={notif.data.url || '#'}
-                                                className="block px-4 py-3 hover:bg-gray-50 border-b border-gray-50 last:border-0 transition-colors"
+                                    <p className="text-sm font-semibold text-gray-900">Notifikasi Kegiatan</p>
+                                    <div className="flex items-center gap-2">
+                                        {notifCounts.total > 0 && (
+                                            <button 
+                                                onClick={() => router.post(route('notifications.markRead'), {}, { preserveScroll: true })}
+                                                className="text-xs text-primary hover:text-primary-light font-medium"
                                             >
-                                                <p className="text-sm text-gray-800">{notif.data.message}</p>
-                                                <p className="text-xs text-gray-400 mt-1">{new Date(notif.created_at).toLocaleDateString('id-ID', { hour: '2-digit', minute: '2-digit' })}</p>
-                                            </Link>
-                                        ))
+                                                Baca semua
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Notification List */}
+                                <div className="max-h-64 overflow-y-auto">
+                                    {user.unread_notifications && user.unread_notifications.length > 0 ? (
+                                        user.unread_notifications.map((notif: any) => {
+                                            const actType = notif.data?.activity_type;
+                                            const cfg = actType ? ACTIVITY_TYPE_CONFIG[actType] : null;
+                                            const Ic = cfg?.icon;
+                                            return (
+                                                <Link 
+                                                    key={notif.id}
+                                                    href={notif.data?.url || '#'}
+                                                    className="block px-4 py-3 hover:bg-gray-50 border-b border-gray-50 last:border-0 transition-colors"
+                                                >
+                                                    <div className="flex items-start gap-2">
+                                                        {Ic && cfg && (
+                                                            <div className={`mt-0.5 p-1 rounded-full ${cfg.bg}`}>
+                                                                <Ic className={`w-3 h-3 ${cfg.color}`} />
+                                                            </div>
+                                                        )}
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="text-sm font-medium text-gray-800 truncate">{notif.data?.title || notif.data?.message}</p>
+                                                            <p className="text-xs text-gray-400 mt-0.5">{new Date(notif.created_at).toLocaleDateString('id-ID', { hour: '2-digit', minute: '2-digit' })}</p>
+                                                        </div>
+                                                    </div>
+                                                </Link>
+                                            );
+                                        })
                                     ) : (
                                         <div className="px-4 py-6 text-center text-sm text-gray-500">
+                                            <Bell className="w-8 h-8 mx-auto mb-2 text-gray-300" />
                                             Tidak ada notifikasi baru.
                                         </div>
                                     )}
@@ -241,6 +420,7 @@ export default function Authenticated({
                             </Dropdown.Content>
                         </Dropdown>
 
+                        {/* User Dropdown */}
                         <Dropdown>
                             <Dropdown.Trigger>
                                 <button className="flex items-center gap-3 p-1.5 rounded-full hover:bg-gray-50 transition-colors border border-transparent hover:border-gray-200 focus:outline-none">
@@ -254,14 +434,18 @@ export default function Authenticated({
                                 </button>
                             </Dropdown.Trigger>
 
-                            <Dropdown.Content align="right" width="48">
-                                <div className="px-4 py-3 border-b border-gray-100 md:hidden">
-                                    <p className="text-sm font-medium text-gray-900 truncate">{user.name}</p>
-                                    <p className="text-sm text-gray-500 truncate">{user.email}</p>
+                            <Dropdown.Content align="right" width="64">
+                                <div className="px-4 py-3 border-b border-gray-100">
+                                    <p className="text-sm font-semibold text-gray-900 truncate">{user.name}</p>
+                                    <p className="text-xs text-gray-500 truncate">{user.email}</p>
+                                    <span className="inline-block mt-1 text-[11px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">{user.role}</span>
                                 </div>
-                                <Dropdown.Link href={route('profile.edit')}>Profile Settings</Dropdown.Link>
+                                <Dropdown.Link href={route('profile.edit')}>⚙️ Pengaturan Profil</Dropdown.Link>
+                                {user.role !== 'Wali Santri' && (
+                                    <Dropdown.Link href={route('activity-schedules.index')}>🔔 Jadwal &amp; Notifikasi</Dropdown.Link>
+                                )}
                                 <Dropdown.Link href={route('logout')} method="post" as="button">
-                                    Log Out
+                                    🚪 Keluar
                                 </Dropdown.Link>
                             </Dropdown.Content>
                         </Dropdown>
@@ -296,6 +480,50 @@ export default function Authenticated({
                                 >
                                     <X className="w-4 h-4" />
                                 </button>
+                            </motion.div>
+                        )}
+
+                        {/* In-App Push Notification Fallback (Ultra Modern Glassmorphism) */}
+                        {inAppNotif && (
+                            <motion.div
+                                initial={{ opacity: 0, y: -50, scale: 0.9, filter: 'blur(10px)' }}
+                                animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
+                                exit={{ opacity: 0, scale: 0.9, filter: 'blur(10px)', transition: { duration: 0.2 } }}
+                                transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                                className="fixed top-20 right-6 z-50 w-full max-w-sm cursor-pointer overflow-hidden rounded-2xl border border-white/40 bg-white/70 shadow-[0_8px_32px_0_rgba(31,38,135,0.15)] backdrop-blur-xl transition-transform hover:scale-[1.02]"
+                                onClick={() => {
+                                    setInAppNotif(null);
+                                    if(inAppNotif.data?.url) router.visit(inAppNotif.data.url);
+                                }}
+                            >
+                                <div className="relative p-5">
+                                    {/* Glowing background accent */}
+                                    <div className="absolute -top-10 -right-10 h-32 w-32 rounded-full bg-blue-500/20 blur-2xl"></div>
+                                    <div className="absolute -bottom-10 -left-10 h-32 w-32 rounded-full bg-emerald-500/20 blur-2xl"></div>
+                                    
+                                    <div className="relative flex items-start justify-between">
+                                        <div className="flex items-center gap-4">
+                                            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-lg shadow-blue-500/30">
+                                                <Bell className="h-6 w-6 animate-[wiggle_1s_ease-in-out_infinite]" />
+                                            </div>
+                                            <div>
+                                                <h4 className="text-base font-bold text-gray-900 leading-tight tracking-tight">
+                                                    {inAppNotif.data?.title || 'Notifikasi Baru'}
+                                                </h4>
+                                                <p className="mt-1 text-sm font-medium text-gray-600 leading-snug">
+                                                    {inAppNotif.data?.message}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <button 
+                                            onClick={(e) => { e.stopPropagation(); setInAppNotif(null); }}
+                                            className="rounded-full p-1.5 text-gray-400 transition-colors hover:bg-gray-200/50 hover:text-gray-700"
+                                        >
+                                            <X className="h-4 w-4" />
+                                        </button>
+                                    </div>
+                                </div>
+                                <div className="h-1 w-full bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500"></div>
                             </motion.div>
                         )}
                     </AnimatePresence>

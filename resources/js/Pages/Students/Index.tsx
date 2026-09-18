@@ -2,10 +2,11 @@ import { useState } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, router } from '@inertiajs/react';
 import { PageProps, Student, Room, Guardian } from '@/types';
-import { Plus, Search, Edit2, Trash2, Users, Filter, Download } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Users, Filter, Download, QrCode } from 'lucide-react';
 import Pagination from '@/Components/Pagination';
 import StudentFormModal from './Partials/StudentFormModal';
 import AcademicHistoryModal from './Partials/AcademicHistoryModal';
+import BarcodeModal from './Partials/BarcodeModal';
 import DangerButton from '@/Components/DangerButton';
 import SecondaryButton from '@/Components/SecondaryButton';
 import Modal from '@/Components/Modal';
@@ -31,6 +32,8 @@ export default function Index({ auth, students, filters, dormitories, rooms, gua
     const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
     const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
     const [studentForHistory, setStudentForHistory] = useState<Student | null>(null);
+    const [isBarcodeModalOpen, setIsBarcodeModalOpen] = useState(false);
+    const [studentForBarcode, setStudentForBarcode] = useState<Student | null>(null);
 
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
@@ -237,6 +240,16 @@ export default function Index({ auth, students, filters, dormitories, rooms, gua
                                                 <div className="flex justify-end gap-2">
                                                     <button
                                                         onClick={() => {
+                                                            setStudentForBarcode(student);
+                                                            setIsBarcodeModalOpen(true);
+                                                        }}
+                                                        className="text-indigo-600 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 p-2 rounded-lg transition-colors"
+                                                        title="Lihat & Cetak QR Code"
+                                                    >
+                                                        <QrCode className="w-4 h-4" />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => {
                                                             setStudentForHistory(student);
                                                             setIsHistoryModalOpen(true);
                                                         }}
@@ -297,6 +310,12 @@ export default function Index({ auth, students, filters, dormitories, rooms, gua
                 show={isHistoryModalOpen}
                 onClose={() => setIsHistoryModalOpen(false)}
                 student={studentForHistory}
+            />
+
+            <BarcodeModal
+                show={isBarcodeModalOpen}
+                onClose={() => setIsBarcodeModalOpen(false)}
+                student={studentForBarcode}
             />
 
             {/* Delete Confirmation Modal */}
