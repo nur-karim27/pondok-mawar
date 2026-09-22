@@ -10,6 +10,7 @@ class StudentMuhafadzoh extends Model
         'student_id',
         'date',
         'type',
+        'tester_name',
         'memorization_name',
         'target',
         'grade',

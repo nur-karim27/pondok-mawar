@@ -12,24 +12,42 @@ class StudentMuhafadzohController extends Controller
 {
     public function index(Request $request)
     {
+        $gender = $request->get('gender', 'semua');
+
         $query = Student::with(['room', 'muhafadzohs' => function($q) {
             $q->latest('date');
         }])->withCount('muhafadzohs');
+        
+        if ($gender !== 'semua') {
+            $query->where('gender', $gender);
+        }
 
-        if ($request->has('search')) {
+        if ($request->has('search') && $request->search != '') {
             $query->where(function ($q) use ($request) {
                 $q->where('name', 'like', '%' . $request->search . '%')
                   ->orWhere('nis', 'like', '%' . $request->search . '%');
             });
         }
 
-        $studentsPaginated = $query->where('status', 'aktif')->latest()->paginate(10)->withQueryString();
-        $students = Student::where('status', 'aktif')->get(['id', 'name', 'nis']);
+        if ($request->has('room_id') && $request->room_id != '') {
+            $query->where('room_id', $request->room_id);
+        }
+
+        $studentsPaginated = $query->where('status', 'aktif')->orderBy('name', 'asc')->paginate(10)->withQueryString();
+        
+        $studentsQuery = Student::where('status', 'aktif');
+        if ($gender !== 'semua') {
+            $studentsQuery->where('gender', $gender);
+        }
+        $students = $studentsQuery->orderBy('name', 'asc')->get(['id', 'name', 'nis']);
+        $rooms = \App\Models\Room::orderBy('name')->get(['id', 'name']);
 
         return Inertia::render('Students/Muhafadzoh/Index', [
             'studentsPaginated' => $studentsPaginated,
             'students' => $students,
-            'filters' => $request->only('search')
+            'rooms' => $rooms,
+            'filters' => $request->only('search', 'room_id'),
+            'currentGender' => $gender
         ]);
     }
 
@@ -39,6 +57,7 @@ class StudentMuhafadzohController extends Controller
             'student_id' => 'required|exists:students,id',
             'date' => 'required|date',
             'type' => 'required|string',
+            'tester_name' => 'nullable|string',
             'memorization_name' => 'required|string',
             'target' => 'nullable|string',
             'grade' => 'nullable|string',
@@ -56,6 +75,7 @@ class StudentMuhafadzohController extends Controller
             'student_id' => 'required|exists:students,id',
             'date' => 'required|date',
             'type' => 'required|string',
+            'tester_name' => 'nullable|string',
             'memorization_name' => 'required|string',
             'target' => 'nullable|string',
             'grade' => 'nullable|string',
@@ -73,24 +93,44 @@ class StudentMuhafadzohController extends Controller
         return redirect()->back()->with('success', 'Data Evaluasi Muhafadzoh berhasil dihapus.');
     }
 
-    public function exportRekapCsv()
+    public function exportRekapCsv(Request $request)
     {
-        $records = StudentMuhafadzoh::with('student')->latest('date')->get();
-        $filename = "rekap_muhafadzoh_" . date('Ymd_His') . ".csv";
+        $gender = $request->get('gender', 'semua');
+        $genderLabel = $gender === 'semua' ? 'SEMUA' : ($gender === 'putra' ? 'PUTRA' : 'PUTRI');
+        
+        $query = StudentMuhafadzoh::with(['student.room'])->latest('date');
+        
+        if ($gender !== 'semua') {
+            $query->whereHas('student', function($q) use ($gender) {
+                $q->where('gender', $gender);
+            });
+        }
+        
+        $records = $query->get();
+        
+        $filename = "Rekap_Evaluasi_Muhafadzoh_" . ucfirst(strtolower($genderLabel)) . "_" . date('Ymd_His') . ".csv";
+        $pesantren = \App\Models\PesantrenProfile::first();
 
-        $response = new StreamedResponse(function() use ($records) {
+        $response = new StreamedResponse(function() use ($records, $pesantren, $genderLabel) {
             $handle = fopen('php://output', 'w');
             fputs($handle, $bom =(chr(0xEF) . chr(0xBB) . chr(0xBF))); // Add BOM
             
-            fputcsv($handle, ['No', 'NIS', 'Nama Santri', 'Tanggal', 'Jenis', 'Nama Hafalan', 'Target', 'Nilai', 'Catatan']);
+            fputcsv($handle, [$pesantren->name ?? 'Pondok Mawar']);
+            fputcsv($handle, ['REKAPITULASI EVALUASI MUHAFADZOH (' . $genderLabel . ')']);
+            fputcsv($handle, ['Dicetak pada: ' . date('d-m-Y H:i:s')]);
+            fputcsv($handle, []);
+            
+            fputcsv($handle, ['No', 'NIS', 'Nama Santri', 'Kamar', 'Tanggal', 'Jenis', 'Penguji', 'Nama Hafalan', 'Target', 'Nilai', 'Catatan']);
 
             foreach ($records as $index => $row) {
                 fputcsv($handle, [
                     $index + 1,
                     $row->student->nis ?? '-',
                     $row->student->name ?? '-',
-                    $row->date->format('Y-m-d'),
+                    $row->student->room->name ?? '-',
+                    $row->date->format('d-m-Y'),
                     $row->type,
+                    $row->tester_name ?? '-',
                     $row->memorization_name,
                     $row->target,
                     $row->grade,
@@ -108,21 +148,28 @@ class StudentMuhafadzohController extends Controller
     public function exportCsv(Student $student)
     {
         $records = StudentMuhafadzoh::where('student_id', $student->id)->latest('date')->get();
-        $filename = "riwayat_muhafadzoh_" . $student->nis . "_" . date('Ymd_His') . ".csv";
+        $safeName = preg_replace('/[^A-Za-z0-9\-]/', '_', $student->name);
+        $filename = "Riwayat_Muhafadzoh_" . $safeName . "_" . $student->nis . "_" . date('Ymd_His') . ".csv";
+        $pesantren = \App\Models\PesantrenProfile::first();
 
-        $response = new StreamedResponse(function() use ($records, $student) {
+        $response = new StreamedResponse(function() use ($records, $student, $pesantren) {
             $handle = fopen('php://output', 'w');
             fputs($handle, $bom =(chr(0xEF) . chr(0xBB) . chr(0xBF))); // Add BOM
             
-            fputcsv($handle, ['NIS: ' . $student->nis, 'Nama: ' . $student->name]);
+            fputcsv($handle, [$pesantren->name ?? 'Pondok Mawar']);
+            fputcsv($handle, ['RIWAYAT EVALUASI MUHAFADZOH SANTRI']);
+            fputcsv($handle, ['NIS', ': ' . $student->nis]);
+            fputcsv($handle, ['Nama', ': ' . $student->name]);
+            fputcsv($handle, ['Dicetak pada', ': ' . date('d-m-Y H:i:s')]);
             fputcsv($handle, []);
-            fputcsv($handle, ['No', 'Tanggal', 'Jenis', 'Nama Hafalan', 'Target', 'Nilai', 'Catatan']);
+            fputcsv($handle, ['No', 'Tanggal', 'Jenis', 'Penguji', 'Nama Hafalan', 'Target', 'Nilai', 'Catatan']);
 
             foreach ($records as $index => $row) {
                 fputcsv($handle, [
                     $index + 1,
-                    $row->date->format('Y-m-d'),
+                    $row->date->format('d-m-Y'),
                     $row->type,
+                    $row->tester_name ?? '-',
                     $row->memorization_name,
                     $row->target,
                     $row->grade,

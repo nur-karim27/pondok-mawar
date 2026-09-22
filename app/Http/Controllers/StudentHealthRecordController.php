@@ -12,24 +12,43 @@ class StudentHealthRecordController extends Controller
 {
     public function index(Request $request)
     {
-        $query = StudentHealthRecord::with('student');
+        $gender = $request->query('gender', 'semua');
+        
+        $query = Student::with(['room', 'healthRecords' => function($q) {
+            $q->latest('date');
+        }])->withCount('healthRecords');
+        
+        if ($gender !== 'semua') {
+            $query->where('gender', $gender);
+        }
 
-        if ($request->filled('search')) {
-            $query->where(function ($q) use ($request) {
-                $q->where('complaint', 'like', '%' . $request->search . '%')
-                  ->orWhere('diagnosis', 'like', '%' . $request->search . '%')
-                  ->orWhereHas('student', fn($s) => $s->where('name', 'like', '%' . $request->search . '%')
-                                                       ->orWhere('nis', 'like', '%' . $request->search . '%'));
+        if ($request->has('search') && $request->search != '') {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('nis', 'like', "%{$search}%");
             });
         }
 
-        $records  = $query->latest()->paginate(10)->withQueryString();
-        $students = Student::where('status', 'aktif')->get(['id', 'name', 'nis']);
+        if ($request->has('room_id') && $request->room_id != '') {
+            $query->where('room_id', $request->room_id);
+        }
+
+        $studentsPaginated = $query->where('status', 'aktif')->orderBy('name', 'asc')->paginate(10)->withQueryString();
+        
+        $studentsQuery = Student::where('status', 'aktif');
+        if ($gender !== 'semua') {
+            $studentsQuery->where('gender', $gender);
+        }
+        $students = $studentsQuery->orderBy('name', 'asc')->get(['id', 'name', 'nis']);
+        $rooms = \App\Models\Room::orderBy('name')->get(['id', 'name']);
 
         return Inertia::render('Kesehatan/Index', [
-            'records'  => $records,
-            'students' => $students,
-            'filters'  => $request->only(['search']),
+            'studentsPaginated' => $studentsPaginated,
+            'students'     => $students,
+            'rooms'        => $rooms,
+            'filters'      => $request->only(['search', 'room_id']),
+            'currentGender'=> $gender
         ]);
     }
 
@@ -74,23 +93,41 @@ class StudentHealthRecordController extends Controller
     /**
      * Export rekap seluruh rekam kesehatan ke CSV
      */
-    public function exportRekapCsv()
+    public function exportRekapCsv(Request $request)
     {
-        $records  = StudentHealthRecord::with('student')->latest('date')->get();
-        $filename = 'rekap_kesehatan_' . date('Ymd_His') . '.csv';
+        $gender = $request->query('gender', 'semua');
+        $genderLabel = $gender === 'semua' ? 'SEMUA' : strtoupper($gender);
+        
+        $query = StudentHealthRecord::with(['student.room'])->latest('date');
+        
+        if ($gender !== 'semua') {
+            $query->whereHas('student', function($q) use ($gender) {
+                $q->where('gender', $gender);
+            });
+        }
+        
+        $records = $query->get();
+        $filename = "Rekap_Kesehatan_Santri_" . ucfirst(strtolower($genderLabel)) . "_" . date('Ymd_His') . ".csv";
+        $pesantren = \App\Models\PesantrenProfile::first();
 
-        $response = new StreamedResponse(function () use ($records) {
+        $response = new StreamedResponse(function () use ($records, $pesantren, $genderLabel) {
             $handle = fopen('php://output', 'w');
             fputs($handle, chr(0xEF) . chr(0xBB) . chr(0xBF)); // BOM UTF-8
 
-            fputcsv($handle, ['No', 'NIS', 'Nama Santri', 'Tanggal', 'Keluhan', 'Diagnosis', 'Penanganan', 'Catatan']);
+            fputcsv($handle, [$pesantren->name ?? 'Pondok Mawar']);
+            fputcsv($handle, ['REKAPITULASI KESEHATAN SANTRI (' . $genderLabel . ')']);
+            fputcsv($handle, ['Dicetak pada: ' . date('d-m-Y H:i:s')]);
+            fputcsv($handle, []);
+
+            fputcsv($handle, ['No', 'NIS', 'Nama Santri', 'Kamar', 'Tanggal', 'Keluhan', 'Diagnosis', 'Penanganan', 'Catatan']);
 
             foreach ($records as $i => $row) {
                 fputcsv($handle, [
                     $i + 1,
                     $row->student->nis ?? '-',
                     $row->student->name ?? '-',
-                    $row->date,
+                    $row->student->room->name ?? '-',
+                    \Carbon\Carbon::parse($row->date)->format('d-m-Y'),
                     $row->complaint,
                     $row->diagnosis ?? '-',
                     $row->treatment ?? '-',
@@ -112,20 +149,26 @@ class StudentHealthRecordController extends Controller
     public function exportCsv(Student $student)
     {
         $records  = StudentHealthRecord::where('student_id', $student->id)->latest('date')->get();
-        $filename = 'kesehatan_' . $student->nis . '_' . date('Ymd_His') . '.csv';
+        $safeName = preg_replace('/[^A-Za-z0-9\-]/', '_', $student->name);
+        $filename = "Riwayat_Kesehatan_" . $safeName . "_" . $student->nis . "_" . date('Ymd_His') . ".csv";
+        $pesantren = \App\Models\PesantrenProfile::first();
 
-        $response = new StreamedResponse(function () use ($records, $student) {
+        $response = new StreamedResponse(function () use ($records, $student, $pesantren) {
             $handle = fopen('php://output', 'w');
             fputs($handle, chr(0xEF) . chr(0xBB) . chr(0xBF));
 
-            fputcsv($handle, ['NIS: ' . $student->nis, 'Nama: ' . $student->name]);
+            fputcsv($handle, [$pesantren->name ?? 'Pondok Mawar']);
+            fputcsv($handle, ['RIWAYAT KESEHATAN SANTRI']);
+            fputcsv($handle, ['NIS', ': ' . $student->nis]);
+            fputcsv($handle, ['Nama', ': ' . $student->name]);
+            fputcsv($handle, ['Dicetak pada', ': ' . date('d-m-Y H:i:s')]);
             fputcsv($handle, []);
             fputcsv($handle, ['No', 'Tanggal', 'Keluhan', 'Diagnosis', 'Penanganan', 'Catatan']);
 
             foreach ($records as $i => $row) {
                 fputcsv($handle, [
                     $i + 1,
-                    $row->date,
+                    \Carbon\Carbon::parse($row->date)->format('d-m-Y'),
                     $row->complaint,
                     $row->diagnosis ?? '-',
                     $row->treatment ?? '-',

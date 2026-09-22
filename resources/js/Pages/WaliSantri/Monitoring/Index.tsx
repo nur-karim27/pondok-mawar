@@ -33,6 +33,7 @@ export default function MonitoringSantri({ auth, student }: any) {
         { id: 'prestasi',    name: 'Prestasi',    icon: Award  },
         { id: 'pelanggaran', name: 'Pelanggaran', icon: Shield },
         { id: 'kesehatan',   name: 'Kesehatan',   icon: Heart  },
+        { id: 'muhafadzoh',  name: 'Muhafadzoh',  icon: Star   },
     ];
 
     const cardVariants: any = {
@@ -428,6 +429,62 @@ export default function MonitoringSantri({ auth, student }: any) {
                                         </div>
                                         <p className="font-bold text-gray-700 text-lg">Alhamdulillah, Sehat!</p>
                                         <p className="text-gray-400 text-sm mt-1">Belum ada riwayat kunjungan ke klinik.</p>
+                                    </motion.div>
+                                )
+                            )}
+
+                            {/* MUHAFADZOH */}
+                            {activeTab === 'muhafadzoh' && (
+                                student.muhafadzohs?.length > 0 ? (
+                                    <div className="space-y-3">
+                                        {student.muhafadzohs.map((record: any, i: number) => (
+                                            <motion.div key={record.id} custom={i} initial="hidden" animate="visible" variants={cardVariants}
+                                                className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all overflow-hidden">
+                                                <div className="h-1" style={{ background: 'linear-gradient(90deg, #f59e0b, #d97706)' }} />
+                                                <div className="p-5 flex gap-4">
+                                                    <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-sm"
+                                                        style={{ background: 'linear-gradient(135deg, #fef3c7, #fde68a)' }}>
+                                                        <Star className="w-5 h-5 text-amber-600" />
+                                                    </div>
+                                                    <div className="flex-1">
+                                                        <div className="flex items-start justify-between gap-2">
+                                                            <h4 className="font-bold text-gray-900 text-lg">{record.memorization_name}</h4>
+                                                            <span className="text-xs text-amber-600 bg-amber-50 font-bold px-2.5 py-1 rounded-full shrink-0 border border-amber-100 shadow-sm">
+                                                                Nilai: {record.grade || '-'}
+                                                            </span>
+                                                        </div>
+                                                        <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-3">
+                                                            <div className="bg-gray-50 p-2 rounded-lg border border-gray-100">
+                                                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Tanggal</p>
+                                                                <p className="text-xs font-semibold text-gray-700">{record.date}</p>
+                                                            </div>
+                                                            <div className="bg-gray-50 p-2 rounded-lg border border-gray-100">
+                                                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Kategori</p>
+                                                                <p className="text-xs font-semibold text-gray-700">{record.type}</p>
+                                                            </div>
+                                                            <div className="bg-gray-50 p-2 rounded-lg border border-gray-100">
+                                                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Target</p>
+                                                                <p className="text-xs font-semibold text-gray-700">{record.target || '-'}</p>
+                                                            </div>
+                                                            <div className="bg-gray-50 p-2 rounded-lg border border-gray-100">
+                                                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Penguji</p>
+                                                                <p className="text-xs font-semibold text-gray-700">{record.tester_name || '-'}</p>
+                                                            </div>
+                                                        </div>
+                                                        {record.notes && <p className="text-gray-500 italic text-sm mt-3 border-t border-gray-50 pt-2">"{record.notes}"</p>}
+                                                    </div>
+                                                </div>
+                                            </motion.div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+                                        className="bg-white rounded-2xl border border-gray-100 shadow-sm p-16 text-center">
+                                        <div className="w-20 h-20 rounded-full bg-amber-50 flex items-center justify-center mx-auto mb-4">
+                                            <Star className="w-10 h-10 text-amber-200" />
+                                        </div>
+                                        <p className="font-bold text-gray-700 text-lg">Belum Ada Evaluasi</p>
+                                        <p className="text-gray-400 text-sm mt-1">Santri belum memiliki catatan evaluasi muhafadzoh.</p>
                                     </motion.div>
                                 )
                             )}

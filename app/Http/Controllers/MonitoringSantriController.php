@@ -17,7 +17,9 @@ class MonitoringSantriController extends Controller
         }
 
         if ($user->role === 'Wali Santri') {
-            $student = Student::with(['achievements', 'healthRecords', 'violations', 'room', 'guardian', 'academicHistories'])
+            $student = Student::with(['achievements', 'healthRecords', 'violations', 'room', 'guardian', 'academicHistories', 'muhafadzohs' => function($q) {
+                $q->latest('date');
+            }])
                 ->where('user_id', $user->id)->first();
             
             if (!$student) {
@@ -64,7 +66,9 @@ class MonitoringSantriController extends Controller
             abort(403, 'Unauthorized action.');
         }
 
-        $student = Student::with(['achievements', 'healthRecords', 'violations', 'room', 'guardian', 'academicHistories'])
+        $student = Student::with(['achievements', 'healthRecords', 'violations', 'room', 'guardian', 'academicHistories', 'muhafadzohs' => function($q) {
+            $q->latest('date');
+        }])
             ->findOrFail($id);
 
         return Inertia::render('WaliSantri/Monitoring/Index', [

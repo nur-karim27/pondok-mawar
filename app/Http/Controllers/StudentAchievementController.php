@@ -12,31 +12,43 @@ class StudentAchievementController extends Controller
 {
     public function index(Request $request)
     {
-        $query = StudentAchievement::with('student');
+        $gender = $request->query('gender', 'semua');
+        
+        $query = Student::with(['room', 'achievements' => function($q) {
+            $q->latest('date');
+        }])->withCount('achievements');
+        
+        if ($gender !== 'semua') {
+            $query->where('gender', $gender);
+        }
 
-        if ($request->filled('search')) {
-            $query->where(function ($q) use ($request) {
-                $q->where('title', 'like', '%' . $request->search . '%')
-                  ->orWhereHas('student', fn($s) => $s->where('name', 'like', '%' . $request->search . '%')
-                                                       ->orWhere('nis', 'like', '%' . $request->search . '%'));
+        if ($request->has('search') && $request->search != '') {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('nis', 'like', "%{$search}%");
             });
         }
 
-        if ($request->filled('level') && $request->level !== 'all') {
-            $query->where('level', $request->level);
+        if ($request->has('room_id') && $request->room_id != '') {
+            $query->where('room_id', $request->room_id);
         }
 
-        if ($request->filled('category') && $request->category !== 'all') {
-            $query->where('category', $request->category);
+        $studentsPaginated = $query->where('status', 'aktif')->orderBy('name', 'asc')->paginate(10)->withQueryString();
+        
+        $studentsQuery = Student::where('status', 'aktif');
+        if ($gender !== 'semua') {
+            $studentsQuery->where('gender', $gender);
         }
-
-        $achievements = $query->latest()->paginate(10)->withQueryString();
-        $students     = Student::where('status', 'aktif')->get(['id', 'name', 'nis']);
+        $students = $studentsQuery->orderBy('name', 'asc')->get(['id', 'name', 'nis']);
+        $rooms = \App\Models\Room::orderBy('name')->get(['id', 'name']);
 
         return Inertia::render('Prestasi/Index', [
-            'achievements' => $achievements,
+            'studentsPaginated' => $studentsPaginated,
             'students'     => $students,
-            'filters'      => $request->only(['search', 'level', 'category']),
+            'rooms'        => $rooms,
+            'filters'      => $request->only(['search', 'room_id']),
+            'currentGender'=> $gender
         ]);
     }
 
@@ -83,25 +95,43 @@ class StudentAchievementController extends Controller
      */
     public function exportRekapCsv(Request $request)
     {
-        $records  = StudentAchievement::with('student')->latest('date')->get();
-        $filename = 'rekap_prestasi_' . date('Ymd_His') . '.csv';
+        $gender = $request->query('gender', 'semua');
+        $genderLabel = $gender === 'semua' ? 'SEMUA' : strtoupper($gender);
+        
+        $query = StudentAchievement::with(['student.room'])->latest('date');
+        
+        if ($gender !== 'semua') {
+            $query->whereHas('student', function($q) use ($gender) {
+                $q->where('gender', $gender);
+            });
+        }
+        
+        $records = $query->get();
+        $filename = "Rekap_Prestasi_Santri_" . ucfirst(strtolower($genderLabel)) . "_" . date('Ymd_His') . ".csv";
+        $pesantren = \App\Models\PesantrenProfile::first();
 
-        $response = new StreamedResponse(function () use ($records) {
+        $response = new StreamedResponse(function () use ($records, $pesantren, $genderLabel) {
             $handle = fopen('php://output', 'w');
             fputs($handle, chr(0xEF) . chr(0xBB) . chr(0xBF)); // BOM UTF-8
 
-            fputcsv($handle, ['No', 'NIS', 'Nama Santri', 'Judul Prestasi', 'Kategori', 'Tingkat', 'Tanggal', 'Keterangan']);
+            fputcsv($handle, [$pesantren->name ?? 'Pondok Mawar']);
+            fputcsv($handle, ['REKAPITULASI PRESTASI SANTRI (' . $genderLabel . ')']);
+            fputcsv($handle, ['Dicetak pada: ' . date('d-m-Y H:i:s')]);
+            fputcsv($handle, []);
+
+            fputcsv($handle, ['No', 'NIS', 'Nama Santri', 'Kamar', 'Judul Prestasi', 'Kategori', 'Tingkat', 'Tanggal', 'Keterangan']);
 
             foreach ($records as $i => $row) {
                 fputcsv($handle, [
                     $i + 1,
                     $row->student->nis ?? '-',
                     $row->student->name ?? '-',
+                    $row->student->room->name ?? '-',
                     $row->title,
                     $row->category,
                     $row->level,
-                    $row->date,
-                    $row->description ?? '-',
+                    \Carbon\Carbon::parse($row->date)->format('d-m-Y'),
+                    $row->description ?? '-'
                 ]);
             }
             fclose($handle);
@@ -119,13 +149,19 @@ class StudentAchievementController extends Controller
     public function exportCsv(Student $student)
     {
         $records  = StudentAchievement::where('student_id', $student->id)->latest('date')->get();
-        $filename = 'prestasi_' . $student->nis . '_' . date('Ymd_His') . '.csv';
+        $safeName = preg_replace('/[^A-Za-z0-9\-]/', '_', $student->name);
+        $filename = "Riwayat_Prestasi_" . $safeName . "_" . $student->nis . "_" . date('Ymd_His') . ".csv";
+        $pesantren = \App\Models\PesantrenProfile::first();
 
-        $response = new StreamedResponse(function () use ($records, $student) {
+        $response = new StreamedResponse(function () use ($records, $student, $pesantren) {
             $handle = fopen('php://output', 'w');
             fputs($handle, chr(0xEF) . chr(0xBB) . chr(0xBF));
 
-            fputcsv($handle, ['NIS: ' . $student->nis, 'Nama: ' . $student->name]);
+            fputcsv($handle, [$pesantren->name ?? 'Pondok Mawar']);
+            fputcsv($handle, ['RIWAYAT PRESTASI SANTRI']);
+            fputcsv($handle, ['NIS', ': ' . $student->nis]);
+            fputcsv($handle, ['Nama', ': ' . $student->name]);
+            fputcsv($handle, ['Dicetak pada', ': ' . date('d-m-Y H:i:s')]);
             fputcsv($handle, []);
             fputcsv($handle, ['No', 'Judul Prestasi', 'Kategori', 'Tingkat', 'Tanggal', 'Keterangan']);
 
@@ -135,8 +171,8 @@ class StudentAchievementController extends Controller
                     $row->title,
                     $row->category,
                     $row->level,
-                    $row->date,
-                    $row->description ?? '-',
+                    \Carbon\Carbon::parse($row->date)->format('d-m-Y'),
+                    $row->description ?? '-'
                 ]);
             }
             fclose($handle);
